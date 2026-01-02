@@ -15,4 +15,7 @@ interface ReservationRepositoryInterface
 
     /** @return Reservation[] */
     public function findAll(): array;
+
+    /** @return Reservation[] */
+    public function findByResourceId(string $resourceId): array;
 }

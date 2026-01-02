@@ -53,4 +53,14 @@ class ReservationRepository extends ServiceEntityRepository implements Reservati
             ->getQuery()
             ->getResult();
     }
+
+    /** @return Reservation[] */
+    public function findByResourceId(string $resourceId): array
+    {
+        return $this->createQueryBuilder('r')
+            ->where('r.resource = :resourceId')
+            ->setParameter('resourceId', $resourceId)
+            ->getQuery()
+            ->getResult();
+    }
 }
