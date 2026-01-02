@@ -75,19 +75,24 @@ class ReservationRepository extends ServiceEntityRepository implements Reservati
         $endFormatted = $endOfDay->format('Y-m-d H:i:s.uP');
         $dayRange = sprintf('[%s,%s)', $startFormatted, $endFormatted);
 
-        $reservations = $this->createQueryBuilder('r')
-            ->join('r.resource', 'res')
-            ->where('res.id = :resourceId')
-            ->andWhere("r.period && CAST(:dayRange AS tstzrange)")
-            ->setParameter('resourceId', $resourceId)
-            ->setParameter('dayRange', $dayRange)
-            ->getQuery()
-            ->getResult();
+        // Pobierz wszystkie rezerwacje dla zasobu i filtruj w PHP
+        // (ponieważ DQL nie obsługuje operatora PostgreSQL &&)
+        $allReservations = $this->findByResourceId($resourceId);
+        
+        $filteredReservations = array_filter($allReservations, function (Reservation $reservation) use ($startOfDay, $endOfDay) {
+            $reservationStart = $reservation->period->start();
+            $reservationEnd = $reservation->period->end();
+            
+            // Sprawdź czy zakres rezerwacji przecina się z zakresem dnia
+            // Nakładanie się: reservationStart < endOfDay && reservationEnd > startOfDay
+            return $reservationStart < $endOfDay && $reservationEnd > $startOfDay;
+        });
 
-        usort($reservations, function (Reservation $a, Reservation $b) {
+        // Sortuj po dacie rozpoczęcia
+        usort($filteredReservations, function (Reservation $a, Reservation $b) {
             return $a->period->start() <=> $b->period->start();
         });
 
-        return $reservations;
+        return array_values($filteredReservations);
     }
 }

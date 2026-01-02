@@ -131,6 +131,13 @@ export async function getReservationsByResource(resourceId: string): Promise<Res
   return Array.isArray(data) ? data : [];
 }
 
+export async function getReservationsByResourceAndDate(resourceId: string, date: string): Promise<Reservation[]> {
+  // date format: YYYY-MM-DD
+  const response = await fetch(`${API_URL}/api/reservations/resource/${resourceId}/date/${date}`);
+  const data = await handleResponse<Reservation[]>(response);
+  return Array.isArray(data) ? data : [];
+}
+
 export async function createReservation(reservation: {
   resourceId: string;
   reservedBy: string;

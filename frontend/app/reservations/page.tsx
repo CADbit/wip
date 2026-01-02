@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getResources, getReservationsByResource, createReservation, cancelReservation, type Resource, type Reservation, ApiException } from '@/lib/api';
+import { getResources, getReservationsByResource, getReservationsByResourceAndDate, createReservation, cancelReservation, type Resource, type Reservation, ApiException } from '@/lib/api';
+import DateTimePicker from '@/components/DateTimePicker';
 
 export default function ReservationsPage() {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -18,6 +19,8 @@ export default function ReservationsPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [dayReservations, setDayReservations] = useState<Reservation[]>([]);
+  const [loadingDayReservations, setLoadingDayReservations] = useState(false);
 
   useEffect(() => {
     loadResources();
@@ -52,6 +55,100 @@ export default function ReservationsPage() {
     } catch (error) {
       console.error('Błąd ładowania rezerwacji:', error);
     }
+  };
+
+  const loadDayReservations = async (resourceId: string, startDateString?: string, endDateString?: string) => {
+    if (!resourceId) {
+      setDayReservations([]);
+      return;
+    }
+
+    // Jeśli mamy obie daty, pobierz rezerwacje dla wszystkich dni w zakresie
+    const datesToCheck: string[] = [];
+    
+    if (startDateString) {
+      const startDate = startDateString.split('T')[0];
+      if (startDate) datesToCheck.push(startDate);
+    }
+    
+    if (endDateString) {
+      const endDate = endDateString.split('T')[0];
+      if (endDate && !datesToCheck.includes(endDate)) {
+        datesToCheck.push(endDate);
+      }
+    }
+
+    // Jeśli nie ma dat, wyczyść
+    if (datesToCheck.length === 0) {
+      setDayReservations([]);
+      return;
+    }
+
+    setLoadingDayReservations(true);
+    try {
+      // Pobierz rezerwacje dla wszystkich dni i połącz je
+      const allReservations: Reservation[] = [];
+      for (const date of datesToCheck) {
+        const data = await getReservationsByResourceAndDate(resourceId, date);
+        // Usuń duplikaty (rezerwacje mogą być w wielu dniach)
+        data.forEach(reservation => {
+          if (!allReservations.find(r => r.id === reservation.id)) {
+            allReservations.push(reservation);
+          }
+        });
+      }
+      setDayReservations(allReservations);
+    } catch (error) {
+      console.error('Błąd ładowania rezerwacji dla dnia:', error);
+      setDayReservations([]);
+    } finally {
+      setLoadingDayReservations(false);
+    }
+  };
+
+  const isTimeSlotOccupied = (dateTimeString: string, isStart: boolean): boolean => {
+    if (!dateTimeString || dayReservations.length === 0) return false;
+    
+    const selectedDate = new Date(dateTimeString);
+    
+    return dayReservations.some(reservation => {
+      const start = new Date(reservation.startDate);
+      const end = new Date(reservation.endDate);
+      
+      if (isStart) {
+        // Sprawdź czy wybrana data rozpoczęcia koliduje z istniejącą rezerwacją
+        return selectedDate >= start && selectedDate < end;
+      } else {
+        // Sprawdź czy wybrana data zakończenia koliduje z istniejącą rezerwacją
+        return selectedDate > start && selectedDate <= end;
+      }
+    });
+  };
+
+  const isTimeRangeOccupied = (startDateString: string, endDateString: string): boolean => {
+    if (!startDateString || !endDateString || dayReservations.length === 0) return false;
+    
+    const selectedStart = new Date(startDateString);
+    const selectedEnd = new Date(endDateString);
+    
+    // Sprawdź czy wybrany zakres koliduje z jakąkolwiek rezerwacją
+    return dayReservations.some(reservation => {
+      const start = new Date(reservation.startDate);
+      const end = new Date(reservation.endDate);
+      
+      // Sprawdź czy zakresy się nakładają: selectedStart < end && selectedEnd > start
+      return selectedStart < end && selectedEnd > start;
+    });
+  };
+
+  const getOccupiedTimeSlots = (): string => {
+    if (dayReservations.length === 0) return '';
+    
+    return dayReservations.map(r => {
+      const start = new Date(r.startDate);
+      const end = new Date(r.endDate);
+      return `${start.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })} (${r.reservedBy})`;
+    }).join(', ');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -135,6 +232,7 @@ export default function ReservationsPage() {
       startDate: '',
       endDate: '',
     });
+    setDayReservations([]);
     setShowForm(true);
   };
 
@@ -213,52 +311,51 @@ export default function ReservationsPage() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Data rozpoczęcia *
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
+                  <DateTimePicker
+                    label="Data rozpoczęcia *"
                     value={formData.startDate}
-                    onChange={(e) => {
-                      setFormData({ ...formData, startDate: e.target.value });
+                    onChange={async (newStartDate) => {
+                      setFormData({ ...formData, startDate: newStartDate });
                       if (errors.startDate) {
                         setErrors({ ...errors, startDate: '' });
                       }
+                      // Pobierz rezerwacje dla wybranego zakresu dat
+                      if (formData.resourceId) {
+                        await loadDayReservations(formData.resourceId, newStartDate, formData.endDate);
+                      }
                     }}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-                      errors.startDate 
-                        ? 'border-red-300 focus:ring-red-500' 
-                        : 'border-gray-300 focus:ring-blue-500'
-                    }`}
+                    reservations={dayReservations}
+                    error={errors.startDate}
+                    timeStep={30}
                   />
-                  {errors.startDate && (
-                    <p className="mt-1 text-sm text-red-600">{errors.startDate}</p>
+                  {loadingDayReservations && (
+                    <p className="mt-1 text-xs text-gray-500">Sprawdzanie dostępności...</p>
+                  )}
+                  {formData.startDate && formData.endDate && isTimeRangeOccupied(formData.startDate, formData.endDate) && (
+                    <p className="mt-1 text-sm text-red-600">
+                      ⚠️ Wybrany zakres czasu koliduje z istniejącą rezerwacją!
+                    </p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Data zakończenia *
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
+                  <DateTimePicker
+                    label="Data zakończenia *"
                     value={formData.endDate}
-                    onChange={(e) => {
-                      setFormData({ ...formData, endDate: e.target.value });
+                    onChange={async (newEndDate) => {
+                      setFormData({ ...formData, endDate: newEndDate });
                       if (errors.endDate) {
                         setErrors({ ...errors, endDate: '' });
                       }
+                      // Pobierz rezerwacje dla wybranego zakresu dat
+                      if (formData.resourceId) {
+                        await loadDayReservations(formData.resourceId, formData.startDate, newEndDate);
+                      }
                     }}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-                      errors.endDate 
-                        ? 'border-red-300 focus:ring-red-500' 
-                        : 'border-gray-300 focus:ring-blue-500'
-                    }`}
+                    reservations={dayReservations}
+                    min={formData.startDate || undefined}
+                    error={errors.endDate}
+                    timeStep={30}
                   />
-                  {errors.endDate && (
-                    <p className="mt-1 text-sm text-red-600">{errors.endDate}</p>
-                  )}
                 </div>
               </div>
               <div className="flex gap-4">
@@ -274,6 +371,7 @@ export default function ReservationsPage() {
                     setShowForm(false);
                     setErrors({});
                     setErrorMessage('');
+                    setDayReservations([]);
                   }}
                   className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
                 >
