@@ -5,12 +5,21 @@ declare(strict_types=1);
 namespace App\Resource\UserInterface\API;
 
 use App\Resource\Application\CreateResource\CreateResourceCommand;
+use App\Resource\Application\DeleteResource\DeleteResourceCommand;
+use App\Resource\Application\UpdateResource\UpdateResourceCommand;
+use App\Resource\Application\GetActiveConferenceRooms\GetActiveConferenceRoomsQuery;
+use App\Resource\Application\GetActiveConferenceRooms\GetActiveConferenceRoomsQueryHandler;
+use App\Resource\Application\GetResource\GetResourceQuery;
+use App\Resource\Application\GetResource\GetResourceQueryHandler;
+use App\Resource\Application\GetResourceList\GetResourceListQuery;
+use App\Resource\Application\GetResourceList\GetResourceListQueryHandler;
 use App\Resource\Domain\Entity\Resource;
 use App\Resource\Domain\Enum\ResourceStatus;
 use App\Resource\Domain\Enum\ResourceType;
 use App\Resource\Domain\Enum\ResourceUnavailability;
-use App\Resource\Domain\Repository\ResourceRepositoryInterface;
 use App\UserInterface\API\ApiResponseHelper;
+use App\UserInterface\API\RequestValidator;
+use InvalidArgumentException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -24,7 +33,9 @@ use ValueError;
 class ResourceController extends AbstractController
 {
     public function __construct(
-        private readonly ResourceRepositoryInterface $resourceRepository,
+        private readonly GetResourceListQueryHandler $getResourceListQueryHandler,
+        private readonly GetResourceQueryHandler $getResourceQueryHandler,
+        private readonly GetActiveConferenceRoomsQueryHandler $getActiveConferenceRoomsQueryHandler,
         private readonly MessageBusInterface $messageBus
     ) {
     }
@@ -35,20 +46,31 @@ class ResourceController extends AbstractController
         $type = $request->query->get('type');
         $status = $request->query->get('status');
 
-        if ($type && $status === ResourceStatus::ACTIVE->value) {
+        $resourceType = null;
+        $resourceStatus = null;
+
+        if ($type) {
             try {
                 $resourceType = ResourceType::from($type);
-                $resources = $this->resourceRepository->findAllActiveByType($resourceType);
             } catch (ValueError $e) {
                 return ApiResponseHelper::validationError('Nieprawidłowy typ zasobu', [
                     'type' => 'Nieprawidłowy typ zasobu'
                 ]);
             }
-        } elseif ($status === ResourceStatus::ACTIVE->value) {
-            $resources = $this->resourceRepository->findAllActive();
-        } else {
-            $resources = $this->resourceRepository->findAll();
         }
+
+        if ($status) {
+            try {
+                $resourceStatus = ResourceStatus::from($status);
+            } catch (ValueError $e) {
+                return ApiResponseHelper::validationError('Nieprawidłowy status zasobu', [
+                    'status' => 'Nieprawidłowy status zasobu'
+                ]);
+            }
+        }
+
+        $query = new GetResourceListQuery($resourceType, $resourceStatus);
+        $resources = ($this->getResourceListQueryHandler)($query);
 
         return ApiResponseHelper::success(
             array_map(fn(Resource $resource) => $this->serializeResource($resource), $resources)
@@ -58,7 +80,8 @@ class ResourceController extends AbstractController
     #[Route('/conference-rooms', name: 'conference_rooms', methods: ['GET'])]
     public function getActiveConferenceRooms(): JsonResponse
     {
-        $resources = $this->resourceRepository->findAllActiveByType(ResourceType::CONFERENCE_ROOM);
+        $query = new GetActiveConferenceRoomsQuery();
+        $resources = ($this->getActiveConferenceRoomsQueryHandler)($query);
 
         return ApiResponseHelper::success(
             array_map(fn(Resource $resource) => $this->serializeResource($resource), $resources)
@@ -70,13 +93,14 @@ class ResourceController extends AbstractController
     {
         try {
             $uuid = Uuid::fromString($id);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format UUID', [
                 'id' => 'Nieprawidłowy format UUID'
             ]);
         }
 
-        $resource = $this->resourceRepository->findById($uuid->toString());
+        $query = new GetResourceQuery($uuid);
+        $resource = ($this->getResourceQueryHandler)($query);
 
         if (!$resource) {
             return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
@@ -88,7 +112,7 @@ class ResourceController extends AbstractController
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
+        $data = RequestValidator::parseJsonRequest($request);
 
         if (!$data) {
             return ApiResponseHelper::error('Nieprawidłowy format JSON', [], Response::HTTP_BAD_REQUEST);
@@ -96,21 +120,16 @@ class ResourceController extends AbstractController
 
         // Walidacja wymaganych pól
         $requiredFields = ['type', 'name', 'status'];
-        $missingFields = [];
-        foreach ($requiredFields as $field) {
-            if (!isset($data[$field]) || $data[$field] === '') {
-                $missingFields[$field] = "Pole '$field' jest wymagane";
-            }
-        }
-        
-        if (!empty($missingFields)) {
+        $missingFields = RequestValidator::validateRequiredFields($data, $requiredFields);
+
+        if ($missingFields) {
             return ApiResponseHelper::validationError('Brakuje wymaganych pól', $missingFields);
         }
 
         try {
             $type = ResourceType::from($data['type']);
             $status = ResourceStatus::from($data['status']);
-            $unavailability = isset($data['unavailability'])
+            $unavailability = isset($data['unavailability']) && $data['unavailability'] !== null
                 ? ResourceUnavailability::from($data['unavailability'])
                 : null;
         } catch (ValueError $e) {
@@ -144,38 +163,33 @@ class ResourceController extends AbstractController
     {
         try {
             $uuid = Uuid::fromString($id);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format UUID', [
                 'id' => 'Nieprawidłowy format UUID'
             ]);
         }
 
-        $resource = $this->resourceRepository->findById($uuid->toString());
+        // Sprawdzenie czy zasób istnieje
+        $query = new GetResourceQuery($uuid);
+        $resource = ($this->getResourceQueryHandler)($query);
 
         if (!$resource) {
             return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
         }
 
-        $data = json_decode($request->getContent(), true);
+        $data = RequestValidator::parseJsonRequest($request);
 
         if (!$data) {
             return ApiResponseHelper::error('Nieprawidłowy format JSON', [], Response::HTTP_BAD_REQUEST);
         }
 
         $errors = [];
-
-        // Aktualizacja pól
-        if (isset($data['name'])) {
-            $resource->name = $data['name'];
-        }
-
-        if (isset($data['description'])) {
-            $resource->description = $data['description'];
-        }
+        $status = null;
+        $unavailability = null;
 
         if (isset($data['status'])) {
             try {
-                $resource->status = ResourceStatus::from($data['status']);
+                $status = ResourceStatus::from($data['status']);
             } catch (ValueError $e) {
                 $errors['status'] = 'Nieprawidłowy status zasobu';
             }
@@ -183,7 +197,7 @@ class ResourceController extends AbstractController
 
         if (isset($data['unavailability'])) {
             try {
-                $resource->unavailability = $data['unavailability'] !== null
+                $unavailability = $data['unavailability'] !== null
                     ? ResourceUnavailability::from($data['unavailability'])
                     : null;
             } catch (ValueError $e) {
@@ -195,10 +209,26 @@ class ResourceController extends AbstractController
             return ApiResponseHelper::validationError('Błędy walidacji', $errors);
         }
 
-        $this->resourceRepository->save($resource);
-        $this->resourceRepository->flush();
+        $command = new UpdateResourceCommand(
+            id: $uuid,
+            name: $data['name'] ?? null,
+            description: $data['description'] ?? null,
+            status: $status,
+            unavailability: $unavailability
+        );
 
-        return ApiResponseHelper::success($this->serializeResource($resource), 'Zasób został zaktualizowany pomyślnie');
+        try {
+            $this->messageBus->dispatch($command);
+        } catch (DomainException $e) {
+            return ApiResponseHelper::error($e->getMessage(), [], Response::HTTP_NOT_FOUND);
+        }
+
+        // Pobranie zaktualizowanego zasobu
+        $updatedResource = ($this->getResourceQueryHandler)($query);
+        return ApiResponseHelper::success(
+            $this->serializeResource($updatedResource),
+            'Zasób został zaktualizowany pomyślnie'
+        );
     }
 
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
@@ -212,14 +242,13 @@ class ResourceController extends AbstractController
             ]);
         }
 
-        $resource = $this->resourceRepository->findById($uuid->toString());
+        $command = new DeleteResourceCommand($uuid);
 
-        if (!$resource) {
-            return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
+        try {
+            $this->messageBus->dispatch($command);
+        } catch (\DomainException $e) {
+            return ApiResponseHelper::error($e->getMessage(), [], Response::HTTP_NOT_FOUND);
         }
-
-        $this->resourceRepository->remove($resource);
-        $this->resourceRepository->flush();
 
         return ApiResponseHelper::success(null, 'Zasób został usunięty pomyślnie');
     }

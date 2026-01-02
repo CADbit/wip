@@ -4,12 +4,22 @@ declare(strict_types=1);
 
 namespace App\Reservation\UserInterface\API;
 
+use App\Reservation\Application\CancelReservation\CancelReservationCommand;
 use App\Reservation\Application\CreateReservation\CreateReservationCommand;
+use App\Reservation\Application\GetReservation\GetReservationQuery;
+use App\Reservation\Application\GetReservation\GetReservationQueryHandler;
+use App\Reservation\Application\GetReservationList\GetReservationListQuery;
+use App\Reservation\Application\GetReservationList\GetReservationListQueryHandler;
+use App\Reservation\Application\GetReservationsByResource\GetReservationsByResourceQuery;
+use App\Reservation\Application\GetReservationsByResource\GetReservationsByResourceQueryHandler;
+use App\Reservation\Application\GetReservationsByResourceAndDate\GetReservationsByResourceAndDateQuery;
+use App\Reservation\Application\GetReservationsByResourceAndDate\GetReservationsByResourceAndDateQueryHandler;
 use App\Reservation\Domain\Entity\Reservation;
-use App\Reservation\Domain\Repository\ReservationRepositoryInterface;
 use App\Reservation\Domain\ValueObject\DateTimeRange;
-use App\Resource\Domain\Repository\ResourceRepositoryInterface;
+use App\Resource\Application\GetResource\GetResourceQuery;
+use App\Resource\Application\GetResource\GetResourceQueryHandler;
 use App\UserInterface\API\ApiResponseHelper;
+use App\UserInterface\API\RequestValidator;
 use DateTimeImmutable;
 use Exception;
 use InvalidArgumentException;
@@ -25,8 +35,11 @@ use Symfony\Component\Uid\Uuid;
 class ReservationController extends AbstractController
 {
     public function __construct(
-        private readonly ReservationRepositoryInterface $reservationRepository,
-        private readonly ResourceRepositoryInterface $resourceRepository,
+        private readonly GetReservationQueryHandler $getReservationQueryHandler,
+        private readonly GetReservationListQueryHandler $getReservationListQueryHandler,
+        private readonly GetReservationsByResourceQueryHandler $getReservationsByResourceQueryHandler,
+        private readonly GetReservationsByResourceAndDateQueryHandler $getReservationsByResourceAndDateQueryHandler,
+        private readonly GetResourceQueryHandler $getResourceQueryHandler,
         private readonly MessageBusInterface $messageBus
     ) {
     }
@@ -34,7 +47,7 @@ class ReservationController extends AbstractController
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
+        $data = RequestValidator::parseJsonRequest($request);
 
         if (!$data) {
             return ApiResponseHelper::error('Invalid JSON', [], Response::HTTP_BAD_REQUEST);
@@ -42,14 +55,9 @@ class ReservationController extends AbstractController
 
         // Walidacja wymaganych pól
         $requiredFields = ['resourceId', 'reservedBy', 'startDate', 'endDate'];
-        $missingFields = [];
-        foreach ($requiredFields as $field) {
-            if (!isset($data[$field]) || $data[$field] === '') {
-                $missingFields[$field] = "Pole '$field' jest wymagane";
-            }
-        }
+        $missingFields = RequestValidator::validateRequiredFields($data, $requiredFields);
 
-        if (!empty($missingFields)) {
+        if ($missingFields) {
             return ApiResponseHelper::validationError('Brakuje wymaganych pól', $missingFields);
         }
 
@@ -63,7 +71,8 @@ class ReservationController extends AbstractController
         }
 
         // Sprawdzenie czy zasób istnieje
-        $resource = $this->resourceRepository->findById($resourceUuid->toString());
+        $resourceQuery = new GetResourceQuery($resourceUuid);
+        $resource = ($this->getResourceQueryHandler)($resourceQuery);
         if (!$resource) {
             return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
         }
@@ -89,7 +98,8 @@ class ReservationController extends AbstractController
         }
 
         // Sprawdzenie konfliktów z istniejącymi rezerwacjami
-        $existingReservations = $this->reservationRepository->findByResourceId($resourceUuid->toString());
+        $existingReservationsQuery = new GetReservationsByResourceQuery($resourceUuid);
+        $existingReservations = ($this->getReservationsByResourceQueryHandler)($existingReservationsQuery);
         $conflicts = [];
         foreach ($existingReservations as $existingReservation) {
             if ($period->overlaps($existingReservation->period)) {
@@ -135,13 +145,14 @@ class ReservationController extends AbstractController
     {
         try {
             $uuid = Uuid::fromString($id);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format UUID', [
                 'id' => 'Nieprawidłowy format UUID'
             ]);
         }
 
-        $reservation = $this->reservationRepository->findById($uuid->toString());
+        $query = new GetReservationQuery($uuid);
+        $reservation = ($this->getReservationQueryHandler)($query);
 
         if (!$reservation) {
             return ApiResponseHelper::error('Rezerwacja nie została znaleziona', [], Response::HTTP_NOT_FOUND);
@@ -155,20 +166,19 @@ class ReservationController extends AbstractController
     {
         try {
             $uuid = Uuid::fromString($id);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format UUID', [
                 'id' => 'Nieprawidłowy format UUID'
             ]);
         }
 
-        $reservation = $this->reservationRepository->findById($uuid->toString());
+        $command = new CancelReservationCommand($uuid);
 
-        if (!$reservation) {
-            return ApiResponseHelper::error('Rezerwacja nie została znaleziona', [], Response::HTTP_NOT_FOUND);
+        try {
+            $this->messageBus->dispatch($command);
+        } catch (\DomainException $e) {
+            return ApiResponseHelper::error($e->getMessage(), [], Response::HTTP_NOT_FOUND);
         }
-
-        $this->reservationRepository->remove($reservation);
-        $this->reservationRepository->flush();
 
         return ApiResponseHelper::success(null, 'Rezerwacja została anulowana pomyślnie');
     }
@@ -176,7 +186,8 @@ class ReservationController extends AbstractController
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(): JsonResponse
     {
-        $reservations = $this->reservationRepository->findAll();
+        $query = new GetReservationListQuery();
+        $reservations = ($this->getReservationListQueryHandler)($query);
 
         return ApiResponseHelper::success(
             array_map(fn(Reservation $reservation) => $this->serializeReservation($reservation), $reservations)
@@ -188,19 +199,21 @@ class ReservationController extends AbstractController
     {
         try {
             $resourceUuid = Uuid::fromString($resourceId);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format UUID zasobu', [
                 'resourceId' => 'Nieprawidłowy format UUID'
             ]);
         }
 
         // Sprawdzenie czy zasób istnieje
-        $resource = $this->resourceRepository->findById($resourceUuid->toString());
+        $resourceQuery = new GetResourceQuery($resourceUuid);
+        $resource = ($this->getResourceQueryHandler)($resourceQuery);
         if (!$resource) {
             return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
         }
 
-        $reservations = $this->reservationRepository->findByResourceId($resourceUuid->toString());
+        $query = new GetReservationsByResourceQuery($resourceUuid);
+        $reservations = ($this->getReservationsByResourceQueryHandler)($query);
 
         return ApiResponseHelper::success(
             array_map(fn(Reservation $reservation) => $this->serializeReservation($reservation), $reservations)
@@ -219,7 +232,8 @@ class ReservationController extends AbstractController
         }
 
         // Sprawdzenie czy zasób istnieje
-        $resource = $this->resourceRepository->findById($resourceUuid->toString());
+        $resourceQuery = new GetResourceQuery($resourceUuid);
+        $resource = ($this->getResourceQueryHandler)($resourceQuery);
         if (!$resource) {
             return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
         }
@@ -233,7 +247,8 @@ class ReservationController extends AbstractController
             ]);
         }
 
-        $reservations = $this->reservationRepository->findByResourceIdAndDate($resourceUuid->toString(), $dateTime);
+        $query = new GetReservationsByResourceAndDateQuery($resourceUuid, $dateTime);
+        $reservations = ($this->getReservationsByResourceAndDateQueryHandler)($query);
 
         return ApiResponseHelper::success(
             array_map(fn(Reservation $reservation) => $this->serializeReservation($reservation), $reservations)
