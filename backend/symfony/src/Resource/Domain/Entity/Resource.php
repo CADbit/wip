@@ -8,17 +8,17 @@ use App\Resource\Domain\Enum\ResourceStatus;
 use App\Resource\Domain\Enum\ResourceType;
 use App\Resource\Domain\Enum\ResourceUnavailability;
 use App\Resource\Infrastructure\Doctrine\ResourceRepository;
-use Cassandra\Uuid;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: ResourceRepository::class)]
 #[ORM\Table(name: 'resource')]
 class Resource
 {
     #[ORM\Id]
-    #[ORM\Column(type: 'string', unique: true)]
-    public UUid $id;
+    #[ORM\Column(type: 'uuid', unique: true)]
+    public Uuid $id;
 
     #[ORM\Column(type: 'resource_type')]
     public ResourceType $type;

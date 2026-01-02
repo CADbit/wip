@@ -47,13 +47,13 @@ class ResourceRepository extends ServiceEntityRepository implements ResourceRepo
         return $this->entityManager->find(Resource::class, $id);
     }
 
-    /** return Resource[] */
+    /** @return Resource[] */
     public function findAllActive(): array
     {
         return $this->createQueryBuilder('r')
             ->andWhere('r.status = :status')
-            ->setParameter('status', ResourceStatus::ACTIVE->value, 'string')
+            ->setParameter('status', ResourceStatus::ACTIVE)
             ->getQuery()
-            ->getArrayResult();
+            ->getResult();
     }
 }
