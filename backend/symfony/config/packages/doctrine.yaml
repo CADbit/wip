@@ -14,6 +14,7 @@ doctrine:
             resource_type: App\Resource\Infrastructure\Doctrine\Type\ResourceTypeType
             resource_status: App\Resource\Infrastructure\Doctrine\Type\ResourceStatusType
             resource_unavailability: App\Resource\Infrastructure\Doctrine\Type\ResourceUnavailabilityType
+            datetime_range: App\Reservation\Infrastructure\Doctrine\Type\DateTimeRangeType
     orm:
         auto_generate_proxy_classes: true
         enable_lazy_ghost_objects: true
