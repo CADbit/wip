@@ -9,7 +9,8 @@ use Symfony\Component\HttpFoundation\Request;
 class RequestValidator
 {
     /**
-     * @param array<string, string> $requiredFields
+     * @param array<string, mixed> $data
+     * @param list<string> $requiredFields
      * @return array<string, string>|null Returns validation errors or null if valid
      */
     public static function validateRequiredFields(array $data, array $requiredFields): ?array

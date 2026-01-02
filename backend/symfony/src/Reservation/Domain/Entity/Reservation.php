@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace App\Reservation\Domain\Entity;
 
-
-use App\Reservation\Domain\Repository\ReservationRepositoryInterface;
 use App\Reservation\Domain\ValueObject\DateTimeRange;
+use App\Reservation\Infrastructure\Doctrine\ReservationRepository;
 use App\Resource\Domain\Entity\Resource;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
-#[ORM\Entity(repositoryClass: ReservationRepositoryInterface::class)]
+#[ORM\Entity(repositoryClass: ReservationRepository::class)]
 #[ORM\Table(name: 'reservation')]
 class Reservation
 {

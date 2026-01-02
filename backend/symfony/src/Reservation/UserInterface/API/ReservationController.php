@@ -53,7 +53,6 @@ class ReservationController extends AbstractController
             return ApiResponseHelper::error('Invalid JSON', [], Response::HTTP_BAD_REQUEST);
         }
 
-        // Walidacja wymaganych pól
         $requiredFields = ['resourceId', 'reservedBy', 'startDate', 'endDate'];
         $missingFields = RequestValidator::validateRequiredFields($data, $requiredFields);
 
@@ -61,8 +60,12 @@ class ReservationController extends AbstractController
             return ApiResponseHelper::validationError('Brakuje wymaganych pól', $missingFields);
         }
 
-        // Walidacja UUID zasobu
         try {
+            if (!is_string($data['resourceId'])) {
+                return ApiResponseHelper::validationError('Nieprawidłowy format UUID zasobu', [
+                    'resourceId' => 'Nieprawidłowy format UUID'
+                ]);
+            }
             $resourceUuid = Uuid::fromString($data['resourceId']);
         } catch (\InvalidArgumentException $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format UUID zasobu', [
@@ -70,15 +73,19 @@ class ReservationController extends AbstractController
             ]);
         }
 
-        // Sprawdzenie czy zasób istnieje
         $resourceQuery = new GetResourceQuery($resourceUuid);
         $resource = ($this->getResourceQueryHandler)($resourceQuery);
         if (!$resource) {
             return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
         }
 
-        // Walidacja dat
         try {
+            if (!is_string($data['startDate']) || !is_string($data['endDate'])) {
+                return ApiResponseHelper::validationError('Nieprawidłowy format daty', [
+                    'startDate' => 'Nieprawidłowy format daty rozpoczęcia',
+                    'endDate' => 'Nieprawidłowy format daty zakończenia'
+                ]);
+            }
             $startDate = new DateTimeImmutable($data['startDate']);
             $endDate = new DateTimeImmutable($data['endDate']);
         } catch (\Exception $e) {
@@ -88,7 +95,6 @@ class ReservationController extends AbstractController
             ]);
         }
 
-        // Utworzenie DateTimeRange
         try {
             $period = new DateTimeRange($startDate, $endDate);
         } catch (\Exception $e) {
@@ -97,7 +103,6 @@ class ReservationController extends AbstractController
             ]);
         }
 
-        // Sprawdzenie konfliktów z istniejącymi rezerwacjami
         $existingReservationsQuery = new GetReservationsByResourceQuery($resourceUuid);
         $existingReservations = ($this->getReservationsByResourceQueryHandler)($existingReservationsQuery);
         $conflicts = [];
@@ -120,6 +125,12 @@ class ReservationController extends AbstractController
                     'conflicts' => $conflicts
                 ]
             );
+        }
+
+        if (!is_string($data['reservedBy'])) {
+            return ApiResponseHelper::validationError('Nieprawidłowy format pola reservedBy', [
+                'reservedBy' => 'Pole reservedBy musi być ciągiem znaków'
+            ]);
         }
 
         $command = new CreateReservationCommand(
@@ -205,7 +216,6 @@ class ReservationController extends AbstractController
             ]);
         }
 
-        // Sprawdzenie czy zasób istnieje
         $resourceQuery = new GetResourceQuery($resourceUuid);
         $resource = ($this->getResourceQueryHandler)($resourceQuery);
         if (!$resource) {
@@ -231,14 +241,12 @@ class ReservationController extends AbstractController
             ]);
         }
 
-        // Sprawdzenie czy zasób istnieje
         $resourceQuery = new GetResourceQuery($resourceUuid);
         $resource = ($this->getResourceQueryHandler)($resourceQuery);
         if (!$resource) {
             return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
         }
 
-        // Walidacja daty
         try {
             $dateTime = new DateTimeImmutable($date);
         } catch (Exception $e) {
@@ -255,6 +263,9 @@ class ReservationController extends AbstractController
         );
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function serializeReservation(Reservation $reservation): array
     {
         return [

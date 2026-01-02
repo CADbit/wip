@@ -19,6 +19,7 @@ use App\Resource\Domain\Enum\ResourceType;
 use App\Resource\Domain\Enum\ResourceUnavailability;
 use App\UserInterface\API\ApiResponseHelper;
 use App\UserInterface\API\RequestValidator;
+use DomainException;
 use InvalidArgumentException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -118,7 +119,6 @@ class ResourceController extends AbstractController
             return ApiResponseHelper::error('Nieprawidłowy format JSON', [], Response::HTTP_BAD_REQUEST);
         }
 
-        // Walidacja wymaganych pól
         $requiredFields = ['type', 'name', 'status'];
         $missingFields = RequestValidator::validateRequiredFields($data, $requiredFields);
 
@@ -127,11 +127,23 @@ class ResourceController extends AbstractController
         }
 
         try {
+            if (!is_string($data['type']) && !is_int($data['type'])) {
+                throw new ValueError('Type must be string or int');
+            }
             $type = ResourceType::from($data['type']);
+
+            if (!is_string($data['status']) && !is_int($data['status'])) {
+                throw new ValueError('Status must be string or int');
+            }
             $status = ResourceStatus::from($data['status']);
-            $unavailability = isset($data['unavailability']) && $data['unavailability'] !== null
-                ? ResourceUnavailability::from($data['unavailability'])
-                : null;
+
+            $unavailability = null;
+            if (isset($data['unavailability']) && $data['unavailability'] !== null) {
+                if (!is_string($data['unavailability']) && !is_int($data['unavailability'])) {
+                    throw new ValueError('Unavailability must be string or int');
+                }
+                $unavailability = ResourceUnavailability::from($data['unavailability']);
+            }
         } catch (ValueError $e) {
             return ApiResponseHelper::validationError('Nieprawidłowa wartość enum', [
                 'type' => 'Nieprawidłowy typ zasobu',
@@ -140,13 +152,29 @@ class ResourceController extends AbstractController
             ]);
         }
 
+        if (!is_string($data['name'])) {
+            return ApiResponseHelper::validationError('Nieprawidłowy format pola name', [
+                'name' => 'Pole name musi być ciągiem znaków'
+            ]);
+        }
+
+        $description = null;
+        if (isset($data['description'])) {
+            if (!is_string($data['description'])) {
+                return ApiResponseHelper::validationError('Nieprawidłowy format pola description', [
+                    'description' => 'Pole description musi być ciągiem znaków'
+                ]);
+            }
+            $description = $data['description'];
+        }
+
         $command = new CreateResourceCommand(
             id: Uuid::v4(),
             type: $type,
             name: $data['name'],
-            description: $data['description'] ?? null,
             status: $status,
-            unavailability: $unavailability
+            unavailability: $unavailability,
+            description: $description
         );
 
         $this->messageBus->dispatch($command);
@@ -169,7 +197,6 @@ class ResourceController extends AbstractController
             ]);
         }
 
-        // Sprawdzenie czy zasób istnieje
         $query = new GetResourceQuery($uuid);
         $resource = ($this->getResourceQueryHandler)($query);
 
@@ -189,19 +216,29 @@ class ResourceController extends AbstractController
 
         if (isset($data['status'])) {
             try {
-                $status = ResourceStatus::from($data['status']);
+                if (!is_string($data['status']) && !is_int($data['status'])) {
+                    $errors['status'] = 'Nieprawidłowy status zasobu';
+                } else {
+                    $status = ResourceStatus::from($data['status']);
+                }
             } catch (ValueError $e) {
                 $errors['status'] = 'Nieprawidłowy status zasobu';
             }
         }
 
-        if (isset($data['unavailability'])) {
-            try {
-                $unavailability = $data['unavailability'] !== null
-                    ? ResourceUnavailability::from($data['unavailability'])
-                    : null;
-            } catch (ValueError $e) {
-                $errors['unavailability'] = 'Nieprawidłowa wartość niedostępności';
+        if (array_key_exists('unavailability', $data)) {
+            if ($data['unavailability'] === null) {
+                $unavailability = null;
+            } else {
+                try {
+                    if (!is_string($data['unavailability']) && !is_int($data['unavailability'])) {
+                        $errors['unavailability'] = 'Nieprawidłowa wartość niedostępności';
+                    } else {
+                        $unavailability = ResourceUnavailability::from($data['unavailability']);
+                    }
+                } catch (ValueError $e) {
+                    $errors['unavailability'] = 'Nieprawidłowa wartość niedostępności';
+                }
             }
         }
 
@@ -209,22 +246,44 @@ class ResourceController extends AbstractController
             return ApiResponseHelper::validationError('Błędy walidacji', $errors);
         }
 
+        $name = null;
+        if (isset($data['name'])) {
+            if (!is_string($data['name'])) {
+                return ApiResponseHelper::validationError('Nieprawidłowy format pola name', [
+                    'name' => 'Pole name musi być ciągiem znaków'
+                ]);
+            }
+            $name = $data['name'];
+        }
+
+        $description = null;
+        if (isset($data['description'])) {
+            if (!is_string($data['description'])) {
+                return ApiResponseHelper::validationError('Nieprawidłowy format pola description', [
+                    'description' => 'Pole description musi być ciągiem znaków'
+                ]);
+            }
+            $description = $data['description'];
+        }
+
         $command = new UpdateResourceCommand(
             id: $uuid,
-            name: $data['name'] ?? null,
-            description: $data['description'] ?? null,
+            name: $name,
+            description: $description,
             status: $status,
             unavailability: $unavailability
         );
 
         try {
             $this->messageBus->dispatch($command);
-        } catch (DomainException $e) {
+        } catch (\DomainException $e) {
             return ApiResponseHelper::error($e->getMessage(), [], Response::HTTP_NOT_FOUND);
         }
 
-        // Pobranie zaktualizowanego zasobu
         $updatedResource = ($this->getResourceQueryHandler)($query);
+        if (!$updatedResource) {
+            return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
+        }
         return ApiResponseHelper::success(
             $this->serializeResource($updatedResource),
             'Zasób został zaktualizowany pomyślnie'
@@ -236,7 +295,7 @@ class ResourceController extends AbstractController
     {
         try {
             $uuid = Uuid::fromString($id);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format UUID', [
                 'id' => 'Nieprawidłowy format UUID'
             ]);
@@ -246,13 +305,16 @@ class ResourceController extends AbstractController
 
         try {
             $this->messageBus->dispatch($command);
-        } catch (\DomainException $e) {
+        } catch (DomainException $e) {
             return ApiResponseHelper::error($e->getMessage(), [], Response::HTTP_NOT_FOUND);
         }
 
         return ApiResponseHelper::success(null, 'Zasób został usunięty pomyślnie');
     }
 
+    /**
+     * @return array<string, string|null>
+     */
     private function serializeResource(Resource $resource): array
     {
         return [

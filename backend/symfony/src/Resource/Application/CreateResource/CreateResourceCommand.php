@@ -15,8 +15,8 @@ class CreateResourceCommand
         public Uuid $id,
         public ResourceType $type,
         public string $name,
-        public ?string $description = null,
         public ResourceStatus $status,
         public ?ResourceUnavailability $unavailability,
+        public ?string $description = null,
     ) { }
 }

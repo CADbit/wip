@@ -28,7 +28,6 @@ class ResourceFixture extends Fixture
         $resourceTypes = ResourceType::cases();
         $resourceStatuses = ResourceStatus::cases();
 
-        // Przykładowe nazwy dla różnych typów zasobów
         $namesByType = [
             ResourceType::CONFERENCE_ROOM->value => [
                 'Sala Konferencyjna A',
@@ -57,19 +56,16 @@ class ResourceFixture extends Fixture
             ],
         ];
 
-        // Generuj 15 losowych zasobów
         for ($i = 0; $i < 15; $i++) {
             $type = $this->faker->randomElement($resourceTypes);
             $status = $this->faker->randomElement($resourceStatuses);
 
-            // 70% szans na ACTIVE, 30% na DISABLED
             if ($this->faker->boolean(70)) {
                 $status = ResourceStatus::ACTIVE;
             } else {
                 $status = ResourceStatus::DISABLED;
             }
 
-            // Jeśli ACTIVE, 20% szans na unavailability
             $unavailability = null;
             if ($status === ResourceStatus::ACTIVE && $this->faker->boolean(20)) {
                 $unavailability = $this->faker->randomElement([
@@ -78,12 +74,10 @@ class ResourceFixture extends Fixture
                 ]);
             }
 
-            // Wybierz nazwę z listy dla danego typu lub wygeneruj losową
             $name = $this->faker->randomElement(
                 $namesByType[$type->value] ?? [$this->faker->words(2, true)]
             );
 
-            // Generuj opis (50% szans)
             $description = $this->faker->boolean(50)
                 ? $this->faker->sentence(10)
                 : null;

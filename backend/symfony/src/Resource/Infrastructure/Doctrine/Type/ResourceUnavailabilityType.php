@@ -7,6 +7,7 @@ namespace App\Resource\Infrastructure\Doctrine\Type;
 use App\Resource\Domain\Enum\ResourceUnavailability;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\Type;
+use InvalidArgumentException;
 
 class ResourceUnavailabilityType extends Type
 {
@@ -17,6 +18,9 @@ class ResourceUnavailabilityType extends Type
         return $platform->getStringTypeDeclarationSQL($column);
     }
 
+    /**
+     * @param mixed $value
+     */
     public function convertToDatabaseValue($value, AbstractPlatform $platform): ?string
     {
         if ($value === null) {
@@ -27,9 +31,16 @@ class ResourceUnavailabilityType extends Type
             return $value->value;
         }
 
+        if (!is_string($value) && !is_scalar($value)) {
+            throw new InvalidArgumentException('Value must be a string or scalar');
+        }
+
         return (string) $value;
     }
 
+    /**
+     * @param mixed $value
+     */
     public function convertToPHPValue($value, AbstractPlatform $platform): ?ResourceUnavailability
     {
         if ($value === null) {
@@ -38,6 +49,10 @@ class ResourceUnavailabilityType extends Type
 
         if ($value instanceof ResourceUnavailability) {
             return $value;
+        }
+
+        if (!is_string($value) && !is_scalar($value)) {
+            throw new InvalidArgumentException('Value must be a string or scalar');
         }
 
         return ResourceUnavailability::from((string) $value);

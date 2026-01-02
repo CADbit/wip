@@ -14,6 +14,9 @@ use Doctrine\ORM\Exception\ORMException;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\Persistence\ManagerRegistry;
 
+/**
+ * @extends ServiceEntityRepository<Resource>
+ */
 class ResourceRepository extends ServiceEntityRepository implements ResourceRepositoryInterface
 {
     public function __construct(
@@ -48,33 +51,48 @@ class ResourceRepository extends ServiceEntityRepository implements ResourceRepo
         return $this->entityManager->find(Resource::class, $id);
     }
 
-    /** @return Resource[] */
+    /**
+     * @return array<Resource>
+     */
     public function findAll(): array
     {
-        return $this->createQueryBuilder('r')
+        /** @var array<Resource> $result */
+        $result = $this->createQueryBuilder('r')
             ->getQuery()
             ->getResult();
+        
+        return $result;
     }
 
-    /** @return Resource[] */
+    /**
+     * @return array<Resource>
+     */
     public function findAllActive(): array
     {
-        return $this->createQueryBuilder('r')
+        /** @var array<Resource> $result */
+        $result = $this->createQueryBuilder('r')
             ->andWhere('r.status = :status')
             ->setParameter('status', ResourceStatus::ACTIVE)
             ->getQuery()
             ->getResult();
+        
+        return $result;
     }
 
-    /** @return Resource[] */
+    /**
+     * @return array<Resource>
+     */
     public function findAllActiveByType(ResourceType $type = ResourceType::CONFERENCE_ROOM): array
     {
-        return $this->createQueryBuilder('r')
+        /** @var array<Resource> $result */
+        $result = $this->createQueryBuilder('r')
             ->andWhere('r.status = :status')
             ->andWhere('r.type = :type')
             ->setParameter('status', ResourceStatus::ACTIVE)
             ->setParameter('type', $type)
             ->getQuery()
             ->getResult();
+        
+        return $result;
     }
 }

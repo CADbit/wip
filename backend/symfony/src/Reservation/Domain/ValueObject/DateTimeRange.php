@@ -17,9 +17,6 @@ class DateTimeRange
         DateTimeImmutable $end
     ) {
         if ($end <= $start) {
-            // Add validation exception!
-//            throw new InvalidReservationPeriodException();
-            // TODO: Dodać wyjątek dla domeny!
             throw new Exception();
         }
 

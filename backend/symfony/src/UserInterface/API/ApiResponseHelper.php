@@ -32,6 +32,7 @@ class ApiResponseHelper
 
     /**
      * Zwraca ujednolicony format odpowiedzi błędu
+     * @param array<string, mixed> $errors
      */
     public static function error(
         string $message,
@@ -52,6 +53,7 @@ class ApiResponseHelper
 
     /**
      * Zwraca ujednolicony format odpowiedzi błędu walidacji
+     * @param array<string, mixed> $fieldErrors
      */
     public static function validationError(
         string $message,

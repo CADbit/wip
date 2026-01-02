@@ -42,8 +42,8 @@ class Resource
         Uuid $id,
         ResourceType $type,
         string $name,
-        ?string $description = null,
         ResourceStatus $status,
+        ?string $description = null,
         ?ResourceUnavailability $unavailability = null,
     ) {
         $this->id = $id;

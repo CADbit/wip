@@ -7,6 +7,7 @@ namespace App\Resource\Infrastructure\Doctrine\Type;
 use App\Resource\Domain\Enum\ResourceStatus;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\Type;
+use InvalidArgumentException;
 
 class ResourceStatusType extends Type
 {
@@ -17,6 +18,9 @@ class ResourceStatusType extends Type
         return $platform->getStringTypeDeclarationSQL($column);
     }
 
+    /**
+     * @param mixed $value
+     */
     public function convertToDatabaseValue($value, AbstractPlatform $platform): ?string
     {
         if ($value === null) {
@@ -27,9 +31,16 @@ class ResourceStatusType extends Type
             return $value->value;
         }
 
+        if (!is_string($value) && !is_scalar($value)) {
+            throw new InvalidArgumentException('Value must be a string or scalar');
+        }
+
         return (string) $value;
     }
 
+    /**
+     * @param mixed $value
+     */
     public function convertToPHPValue($value, AbstractPlatform $platform): ?ResourceStatus
     {
         if ($value === null) {
@@ -38,6 +49,10 @@ class ResourceStatusType extends Type
 
         if ($value instanceof ResourceStatus) {
             return $value;
+        }
+
+        if (!is_string($value) && !is_scalar($value)) {
+            throw new InvalidArgumentException('Value must be a string or scalar');
         }
 
         return ResourceStatus::from((string) $value);
