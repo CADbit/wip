@@ -19,4 +19,3 @@ class GetResourceQueryHandler
         return $this->resourceRepository->findById($query->id->toString());
     }
 }
-

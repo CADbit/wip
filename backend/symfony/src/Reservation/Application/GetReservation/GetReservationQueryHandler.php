@@ -19,4 +19,3 @@ class GetReservationQueryHandler
         return $this->reservationRepository->findById($query->id->toString());
     }
 }
-

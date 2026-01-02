@@ -27,7 +27,7 @@ class DateTimeRangeType extends Type
             return null;
         }
 
-        if (!$value instanceof DateTimeRange) {
+        if (! $value instanceof DateTimeRange) {
             throw new InvalidArgumentException('Expected DateTimeRange instance');
         }
 
@@ -51,7 +51,7 @@ class DateTimeRangeType extends Type
             if (count($value) === 2) {
                 $startStr = is_string($value[0]) ? $value[0] : (string)$value[0];
                 $endStr = is_string($value[1]) ? $value[1] : (string)$value[1];
-                
+
                 $endStr = rtrim($endStr, ')');
 
                 $start = $this->parseDateTime($startStr);
@@ -59,19 +59,19 @@ class DateTimeRangeType extends Type
 
                 if ($start === false || $end === false) {
                     throw new \InvalidArgumentException(
-                        'Invalid date range format. Start: ' . var_export($startStr, true) . 
-                        ', End: ' . var_export($endStr, true) . 
+                        'Invalid date range format. Start: ' . var_export($startStr, true) .
+                        ', End: ' . var_export($endStr, true) .
                         ', Value: ' . json_encode($value)
                     );
                 }
 
                 return new DateTimeRange($start, $end);
             }
-            
+
             if (isset($value['lower']) && isset($value['upper'])) {
                 $startStr = is_string($value['lower']) ? $value['lower'] : (string)$value['lower'];
                 $endStr = is_string($value['upper']) ? $value['upper'] : (string)$value['upper'];
-                
+
                 $start = $this->parseDateTime($startStr);
                 $end = $this->parseDateTime($endStr);
 
@@ -81,7 +81,7 @@ class DateTimeRangeType extends Type
 
                 return new DateTimeRange($start, $end);
             }
-            
+
             throw new \InvalidArgumentException('Invalid array format for date range: ' . json_encode($value));
         }
 
@@ -127,11 +127,11 @@ class DateTimeRangeType extends Type
     private function parseDateTime(string $dateString): DateTimeImmutable|false
     {
         $normalized = $dateString;
-        
+
         if (preg_match('/^(.+?)([+-]\d{2})$/u', $dateString, $matches)) {
             $base = $matches[1];
             $tz = $matches[2];
-            if (!str_contains($tz, ':')) {
+            if (! str_contains($tz, ':')) {
                 $normalized = $base . $tz . ':00';
             }
         }
@@ -174,4 +174,3 @@ class DateTimeRangeType extends Type
         return true;
     }
 }
-

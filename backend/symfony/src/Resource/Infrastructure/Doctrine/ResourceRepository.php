@@ -22,8 +22,7 @@ class ResourceRepository extends ServiceEntityRepository implements ResourceRepo
     public function __construct(
         ManagerRegistry $registry,
         private readonly EntityManagerInterface $entityManager
-    )
-    {
+    ) {
         parent::__construct($registry, Resource::class);
     }
 
@@ -60,7 +59,7 @@ class ResourceRepository extends ServiceEntityRepository implements ResourceRepo
         $result = $this->createQueryBuilder('r')
             ->getQuery()
             ->getResult();
-        
+
         return $result;
     }
 
@@ -75,7 +74,7 @@ class ResourceRepository extends ServiceEntityRepository implements ResourceRepo
             ->setParameter('status', ResourceStatus::ACTIVE)
             ->getQuery()
             ->getResult();
-        
+
         return $result;
     }
 
@@ -92,7 +91,7 @@ class ResourceRepository extends ServiceEntityRepository implements ResourceRepo
             ->setParameter('type', $type)
             ->getQuery()
             ->getResult();
-        
+
         return $result;
     }
 }

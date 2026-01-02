@@ -31,4 +31,3 @@ class GetResourceListQueryHandler
         return $this->resourceRepository->findAll();
     }
 }
-

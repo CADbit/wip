@@ -7,4 +7,3 @@ namespace App\Resource\Application\GetActiveConferenceRooms;
 class GetActiveConferenceRoomsQuery
 {
 }
-

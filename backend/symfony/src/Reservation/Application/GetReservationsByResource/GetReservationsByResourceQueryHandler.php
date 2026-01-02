@@ -22,4 +22,3 @@ class GetReservationsByResourceQueryHandler
         return $this->reservationRepository->findByResourceId($query->resourceId->toString());
     }
 }
-

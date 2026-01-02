@@ -15,6 +15,6 @@ class CreateReservationCommand
         public Resource $resource,
         public string $reservedBy,
         public DateTimeRange $period,
-    ) { }
+    ) {
+    }
 }
-

@@ -33,4 +33,3 @@ class CorsSubscriber implements EventSubscriberInterface
         }
     }
 }
-

@@ -29,4 +29,3 @@ class CreateReservationCommandHandler
         $this->reservationRepository->flush();
     }
 }
-

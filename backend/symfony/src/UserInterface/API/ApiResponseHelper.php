@@ -18,15 +18,15 @@ class ApiResponseHelper
         int $statusCode = Response::HTTP_OK
     ): JsonResponse {
         $response = [];
-        
+
         if ($message !== null) {
             $response['message'] = $message;
         }
-        
+
         if ($data !== null) {
             $response['data'] = $data;
         }
-        
+
         return new JsonResponse($response, $statusCode);
     }
 
@@ -43,11 +43,11 @@ class ApiResponseHelper
             'error' => true,
             'message' => $message,
         ];
-        
-        if (!empty($errors)) {
+
+        if (! empty($errors)) {
             $response['errors'] = $errors;
         }
-        
+
         return new JsonResponse($response, $statusCode);
     }
 
@@ -62,4 +62,3 @@ class ApiResponseHelper
         return self::error($message, $fieldErrors, Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 }
-

@@ -6,5 +6,4 @@ namespace App\Resource\Domain\Service;
 
 class ResourceAvailabilityChecker
 {
-
 }

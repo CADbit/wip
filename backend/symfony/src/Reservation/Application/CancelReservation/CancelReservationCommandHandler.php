@@ -19,7 +19,7 @@ class CancelReservationCommandHandler
     {
         $reservation = $this->reservationRepository->findById($command->id->toString());
 
-        if (!$reservation) {
+        if (! $reservation) {
             throw new \DomainException('Rezerwacja nie została znaleziona');
         }
 
@@ -27,4 +27,3 @@ class CancelReservationCommandHandler
         $this->reservationRepository->flush();
     }
 }
-

@@ -49,7 +49,7 @@ class ReservationController extends AbstractController
     {
         $data = RequestValidator::parseJsonRequest($request);
 
-        if (!$data) {
+        if (! $data) {
             return ApiResponseHelper::error('Invalid JSON', [], Response::HTTP_BAD_REQUEST);
         }
 
@@ -61,29 +61,29 @@ class ReservationController extends AbstractController
         }
 
         try {
-            if (!is_string($data['resourceId'])) {
+            if (! is_string($data['resourceId'])) {
                 return ApiResponseHelper::validationError('Nieprawidłowy format UUID zasobu', [
-                    'resourceId' => 'Nieprawidłowy format UUID'
+                    'resourceId' => 'Nieprawidłowy format UUID',
                 ]);
             }
             $resourceUuid = Uuid::fromString($data['resourceId']);
         } catch (\InvalidArgumentException $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format UUID zasobu', [
-                'resourceId' => 'Nieprawidłowy format UUID'
+                'resourceId' => 'Nieprawidłowy format UUID',
             ]);
         }
 
         $resourceQuery = new GetResourceQuery($resourceUuid);
         $resource = ($this->getResourceQueryHandler)($resourceQuery);
-        if (!$resource) {
+        if (! $resource) {
             return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
         }
 
         try {
-            if (!is_string($data['startDate']) || !is_string($data['endDate'])) {
+            if (! is_string($data['startDate']) || ! is_string($data['endDate'])) {
                 return ApiResponseHelper::validationError('Nieprawidłowy format daty', [
                     'startDate' => 'Nieprawidłowy format daty rozpoczęcia',
-                    'endDate' => 'Nieprawidłowy format daty zakończenia'
+                    'endDate' => 'Nieprawidłowy format daty zakończenia',
                 ]);
             }
             $startDate = new DateTimeImmutable($data['startDate']);
@@ -91,7 +91,7 @@ class ReservationController extends AbstractController
         } catch (\Exception $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format daty', [
                 'startDate' => 'Nieprawidłowy format daty rozpoczęcia',
-                'endDate' => 'Nieprawidłowy format daty zakończenia'
+                'endDate' => 'Nieprawidłowy format daty zakończenia',
             ]);
         }
 
@@ -99,7 +99,7 @@ class ReservationController extends AbstractController
             $period = new DateTimeRange($startDate, $endDate);
         } catch (\Exception $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy zakres dat', [
-                'endDate' => 'Data zakończenia musi być późniejsza niż data rozpoczęcia'
+                'endDate' => 'Data zakończenia musi być późniejsza niż data rozpoczęcia',
             ]);
         }
 
@@ -116,20 +116,20 @@ class ReservationController extends AbstractController
             }
         }
 
-        if (!empty($conflicts)) {
+        if (! empty($conflicts)) {
             return ApiResponseHelper::validationError(
                 'Wybrany termin koliduje z istniejącymi rezerwacjami',
                 [
                     'startDate' => 'Termin koliduje z istniejącymi rezerwacjami',
                     'endDate' => 'Termin koliduje z istniejącymi rezerwacjami',
-                    'conflicts' => $conflicts
+                    'conflicts' => $conflicts,
                 ]
             );
         }
 
-        if (!is_string($data['reservedBy'])) {
+        if (! is_string($data['reservedBy'])) {
             return ApiResponseHelper::validationError('Nieprawidłowy format pola reservedBy', [
-                'reservedBy' => 'Pole reservedBy musi być ciągiem znaków'
+                'reservedBy' => 'Pole reservedBy musi być ciągiem znaków',
             ]);
         }
 
@@ -158,14 +158,14 @@ class ReservationController extends AbstractController
             $uuid = Uuid::fromString($id);
         } catch (InvalidArgumentException $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format UUID', [
-                'id' => 'Nieprawidłowy format UUID'
+                'id' => 'Nieprawidłowy format UUID',
             ]);
         }
 
         $query = new GetReservationQuery($uuid);
         $reservation = ($this->getReservationQueryHandler)($query);
 
-        if (!$reservation) {
+        if (! $reservation) {
             return ApiResponseHelper::error('Rezerwacja nie została znaleziona', [], Response::HTTP_NOT_FOUND);
         }
 
@@ -179,7 +179,7 @@ class ReservationController extends AbstractController
             $uuid = Uuid::fromString($id);
         } catch (InvalidArgumentException $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format UUID', [
-                'id' => 'Nieprawidłowy format UUID'
+                'id' => 'Nieprawidłowy format UUID',
             ]);
         }
 
@@ -201,7 +201,7 @@ class ReservationController extends AbstractController
         $reservations = ($this->getReservationListQueryHandler)($query);
 
         return ApiResponseHelper::success(
-            array_map(fn(Reservation $reservation) => $this->serializeReservation($reservation), $reservations)
+            array_map(fn (Reservation $reservation) => $this->serializeReservation($reservation), $reservations)
         );
     }
 
@@ -212,13 +212,13 @@ class ReservationController extends AbstractController
             $resourceUuid = Uuid::fromString($resourceId);
         } catch (InvalidArgumentException $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format UUID zasobu', [
-                'resourceId' => 'Nieprawidłowy format UUID'
+                'resourceId' => 'Nieprawidłowy format UUID',
             ]);
         }
 
         $resourceQuery = new GetResourceQuery($resourceUuid);
         $resource = ($this->getResourceQueryHandler)($resourceQuery);
-        if (!$resource) {
+        if (! $resource) {
             return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
         }
 
@@ -226,7 +226,7 @@ class ReservationController extends AbstractController
         $reservations = ($this->getReservationsByResourceQueryHandler)($query);
 
         return ApiResponseHelper::success(
-            array_map(fn(Reservation $reservation) => $this->serializeReservation($reservation), $reservations)
+            array_map(fn (Reservation $reservation) => $this->serializeReservation($reservation), $reservations)
         );
     }
 
@@ -237,13 +237,13 @@ class ReservationController extends AbstractController
             $resourceUuid = Uuid::fromString($resourceId);
         } catch (InvalidArgumentException $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format UUID zasobu', [
-                'resourceId' => 'Nieprawidłowy format UUID'
+                'resourceId' => 'Nieprawidłowy format UUID',
             ]);
         }
 
         $resourceQuery = new GetResourceQuery($resourceUuid);
         $resource = ($this->getResourceQueryHandler)($resourceQuery);
-        if (!$resource) {
+        if (! $resource) {
             return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
         }
 
@@ -251,7 +251,7 @@ class ReservationController extends AbstractController
             $dateTime = new DateTimeImmutable($date);
         } catch (Exception $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format daty', [
-                'date' => 'Nieprawidłowy format daty. Oczekiwany format: Y-m-d (np. 2024-01-15)'
+                'date' => 'Nieprawidłowy format daty. Oczekiwany format: Y-m-d (np. 2024-01-15)',
             ]);
         }
 
@@ -259,7 +259,7 @@ class ReservationController extends AbstractController
         $reservations = ($this->getReservationsByResourceAndDateQueryHandler)($query);
 
         return ApiResponseHelper::success(
-            array_map(fn(Reservation $reservation) => $this->serializeReservation($reservation), $reservations)
+            array_map(fn (Reservation $reservation) => $this->serializeReservation($reservation), $reservations)
         );
     }
 
@@ -279,4 +279,3 @@ class ReservationController extends AbstractController
         ];
     }
 }
-

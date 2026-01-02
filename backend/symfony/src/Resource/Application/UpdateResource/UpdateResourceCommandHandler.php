@@ -19,7 +19,7 @@ class UpdateResourceCommandHandler
     {
         $resource = $this->resourceRepository->findById($command->id->toString());
 
-        if (!$resource) {
+        if (! $resource) {
             throw new \DomainException('Zasób nie został znaleziony');
         }
 
@@ -43,4 +43,3 @@ class UpdateResourceCommandHandler
         $this->resourceRepository->flush();
     }
 }
-

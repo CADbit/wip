@@ -18,5 +18,6 @@ class CreateResourceCommand
         public ResourceStatus $status,
         public ?ResourceUnavailability $unavailability,
         public ?string $description = null,
-    ) { }
+    ) {
+    }
 }

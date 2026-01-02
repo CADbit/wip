@@ -10,8 +10,11 @@ use DateTimeImmutable;
 interface ReservationRepositoryInterface
 {
     public function save(Reservation $Reservation): void;
+
     public function remove(Reservation $Reservation): void;
+
     public function flush(): void;
+
     public function findById(string $id): ?Reservation;
 
     /** @return Reservation[] */

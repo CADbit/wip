@@ -17,12 +17,12 @@ class RequestValidator
     {
         $missingFields = [];
         foreach ($requiredFields as $field) {
-            if (!isset($data[$field]) || $data[$field] === '') {
+            if (! isset($data[$field]) || $data[$field] === '') {
                 $missingFields[$field] = "Pole '$field' jest wymagane";
             }
         }
 
-        return !empty($missingFields) ? $missingFields : null;
+        return ! empty($missingFields) ? $missingFields : null;
     }
 
     /**
@@ -31,7 +31,7 @@ class RequestValidator
     public static function parseJsonRequest(Request $request): ?array
     {
         $data = json_decode($request->getContent(), true);
+
         return is_array($data) ? $data : null;
     }
 }
-

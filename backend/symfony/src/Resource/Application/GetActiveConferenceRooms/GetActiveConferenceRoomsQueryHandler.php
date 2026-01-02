@@ -23,4 +23,3 @@ class GetActiveConferenceRoomsQueryHandler
         return $this->resourceRepository->findAllActiveByType(ResourceType::CONFERENCE_ROOM);
     }
 }
-

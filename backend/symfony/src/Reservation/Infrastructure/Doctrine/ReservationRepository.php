@@ -20,8 +20,7 @@ class ReservationRepository extends ServiceEntityRepository implements Reservati
     public function __construct(
         ManagerRegistry $registry,
         private readonly EntityManagerInterface $entityManager
-    )
-    {
+    ) {
         parent::__construct($registry, Reservation::class);
     }
 
@@ -58,7 +57,7 @@ class ReservationRepository extends ServiceEntityRepository implements Reservati
         $result = $this->createQueryBuilder('r')
             ->getQuery()
             ->getResult();
-        
+
         return $result;
     }
 
@@ -74,7 +73,7 @@ class ReservationRepository extends ServiceEntityRepository implements Reservati
             ->setParameter('resourceId', $resourceId)
             ->getQuery()
             ->getResult();
-        
+
         return $result;
     }
 
@@ -91,11 +90,11 @@ class ReservationRepository extends ServiceEntityRepository implements Reservati
         $dayRange = sprintf('[%s,%s)', $startFormatted, $endFormatted);
 
         $allReservations = $this->findByResourceId($resourceId);
-        
+
         $filteredReservations = array_filter($allReservations, function (Reservation $reservation) use ($startOfDay, $endOfDay) {
             $reservationStart = $reservation->period->start();
             $reservationEnd = $reservation->period->end();
-            
+
             return $reservationStart < $endOfDay && $reservationEnd > $startOfDay;
         });
 

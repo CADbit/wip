@@ -31,7 +31,7 @@ class ResourceUnavailabilityType extends Type
             return $value->value;
         }
 
-        if (!is_string($value) && !is_scalar($value)) {
+        if (! is_string($value) && ! is_scalar($value)) {
             throw new InvalidArgumentException('Value must be a string or scalar');
         }
 
@@ -51,7 +51,7 @@ class ResourceUnavailabilityType extends Type
             return $value;
         }
 
-        if (!is_string($value) && !is_scalar($value)) {
+        if (! is_string($value) && ! is_scalar($value)) {
             throw new InvalidArgumentException('Value must be a string or scalar');
         }
 
@@ -68,4 +68,3 @@ class ResourceUnavailabilityType extends Type
         return true;
     }
 }
-

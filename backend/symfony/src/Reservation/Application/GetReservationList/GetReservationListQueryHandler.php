@@ -22,4 +22,3 @@ class GetReservationListQueryHandler
         return $this->reservationRepository->findAll();
     }
 }
-

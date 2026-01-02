@@ -36,8 +36,7 @@ class Reservation
         Resource $resource,
         string $reservedBy,
         DateTimeRange $period
-    )
-    {
+    ) {
         $this->id = $id;
         $this->resource = $resource;
         $this->reservedBy = $reservedBy;

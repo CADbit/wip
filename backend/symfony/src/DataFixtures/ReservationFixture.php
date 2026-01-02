@@ -105,4 +105,3 @@ class ReservationFixture extends Fixture implements DependentFixtureInterface
         ];
     }
 }
-

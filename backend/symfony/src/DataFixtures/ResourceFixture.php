@@ -97,4 +97,3 @@ class ResourceFixture extends Fixture
         $manager->flush();
     }
 }
-

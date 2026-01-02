@@ -7,4 +7,3 @@ namespace App\Reservation\Application\GetReservationList;
 class GetReservationListQuery
 {
 }
-
