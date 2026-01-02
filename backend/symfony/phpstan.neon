@@ -1,0 +1,29 @@
+includes:
+    - vendor/phpstan/phpstan-doctrine/extension.neon
+    - vendor/phpstan/phpstan-symfony/extension.neon
+
+parameters:
+    level: 9
+    paths:
+        - src
+    excludePaths:
+        - src/DataFixtures/*
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        # Ignore missing iterable value types (if needed)
+        - '#missingType\.iterableValue#'
+        # Ignore missing generic typehints (if needed)
+        - '#missingType\.generics#'
+    
+    # Symfony specific
+    symfony:
+        container_xml_path: var/cache/dev/App_KernelDevDebugContainer.xml
+        console_application_loader: vendor/bin/phpstan-symfony-console
+    
+    # Doctrine specific
+    doctrine:
+        allowNullablePropertyForRequiredField: true
+    
+    # Ignore baseline if exists
+    # baseline: phpstan-baseline.neon
+
