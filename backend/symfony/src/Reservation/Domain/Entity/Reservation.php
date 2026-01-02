@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Reservation\Domain\Entity;
 
+use App\Reservation\Domain\Entity\Traits\DomainEventsTrait;
+use App\Reservation\Domain\Event\ReservationCreated;
 use App\Reservation\Domain\ValueObject\DateTimeRange;
 use App\Reservation\Infrastructure\Doctrine\ReservationRepository;
 use App\Resource\Domain\Entity\Resource;
@@ -15,6 +17,8 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Table(name: 'reservation')]
 class Reservation
 {
+    use DomainEventsTrait;
+
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
     public Uuid $id;
@@ -42,5 +46,13 @@ class Reservation
         $this->reservedBy = $reservedBy;
         $this->period = $period;
         $this->createdAt = new DateTimeImmutable();
+
+        $this->recordEvent(new ReservationCreated(
+            reservationId: $this->id,
+            resource: $this->resource,
+            reservedBy: $this->reservedBy,
+            period: $this->period,
+            createdAt: $this->createdAt
+        ));
     }
 }

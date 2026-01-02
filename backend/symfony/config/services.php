@@ -38,4 +38,3 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         'App\Reservation\Infrastructure\Doctrine\ReservationRepository'
     );
 };
-
