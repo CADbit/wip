@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Resource\Domain\Repository;
 
 use App\Resource\Domain\Entity\Resource;
+use App\Resource\Domain\Enum\ResourceType;
 
 interface ResourceRepositoryInterface
 {
@@ -17,5 +18,5 @@ interface ResourceRepositoryInterface
     public function findAllActive(): array;
 
     /** @return Resource[] */
-    public function findAllConferenceRoomActive(): array;
+    public function findAllActiveByType(ResourceType $type = ResourceType::CONFERENCE_ROOM): array;
 }

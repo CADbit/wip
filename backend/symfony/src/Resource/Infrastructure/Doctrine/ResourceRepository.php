@@ -6,6 +6,7 @@ namespace App\Resource\Infrastructure\Doctrine;
 
 use App\Resource\Domain\Entity\Resource;
 use App\Resource\Domain\Enum\ResourceStatus;
+use App\Resource\Domain\Enum\ResourceType;
 use App\Resource\Domain\Repository\ResourceRepositoryInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -54,6 +55,18 @@ class ResourceRepository extends ServiceEntityRepository implements ResourceRepo
             ->andWhere('r.status = :status')
             ->setParameter('status', ResourceStatus::ACTIVE)
             ->getQuery()
-            ->getResult();
+            ->getArrayResult();
+    }
+
+    /** @return Resource[] */
+    public function findAllActiveByType(ResourceType $type = ResourceType::CONFERENCE_ROOM): array
+    {
+        return $this->createQueryBuilder('r')
+            ->andWhere('r.status = :status')
+            ->andWhere('r.type = :type')
+            ->setParameter('status', ResourceStatus::ACTIVE)
+            ->setParameter('type', $type)
+            ->getQuery()
+            ->getArrayResult();
     }
 }
