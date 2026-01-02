@@ -15,6 +15,9 @@ interface ResourceRepositoryInterface
     public function findById(string $id): ?Resource;
 
     /** @return Resource[] */
+    public function findAll(): array;
+
+    /** @return Resource[] */
     public function findAllActive(): array;
 
     /** @return Resource[] */

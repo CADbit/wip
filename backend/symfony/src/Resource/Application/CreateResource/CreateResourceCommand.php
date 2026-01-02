@@ -7,12 +7,12 @@ namespace App\Resource\Application\CreateResource;
 use App\Resource\Domain\Enum\ResourceStatus;
 use App\Resource\Domain\Enum\ResourceType;
 use App\Resource\Domain\Enum\ResourceUnavailability;
-use Cassandra\Uuid;
+use Symfony\Component\Uid\Uuid;
 
 class CreateResourceCommand
 {
     public function __construct(
-        public UUid $id,
+        public Uuid $id,
         public ResourceType $type,
         public string $name,
         public ?string $description = null,

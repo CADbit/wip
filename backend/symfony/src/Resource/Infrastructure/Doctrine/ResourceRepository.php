@@ -49,13 +49,21 @@ class ResourceRepository extends ServiceEntityRepository implements ResourceRepo
     }
 
     /** @return Resource[] */
+    public function findAll(): array
+    {
+        return $this->createQueryBuilder('r')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /** @return Resource[] */
     public function findAllActive(): array
     {
         return $this->createQueryBuilder('r')
             ->andWhere('r.status = :status')
             ->setParameter('status', ResourceStatus::ACTIVE)
             ->getQuery()
-            ->getArrayResult();
+            ->getResult();
     }
 
     /** @return Resource[] */
@@ -67,6 +75,6 @@ class ResourceRepository extends ServiceEntityRepository implements ResourceRepo
             ->setParameter('status', ResourceStatus::ACTIVE)
             ->setParameter('type', $type)
             ->getQuery()
-            ->getArrayResult();
+            ->getResult();
     }
 }
