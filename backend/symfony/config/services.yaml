@@ -25,3 +25,6 @@ services:
     # Repository interface binding
     App\Resource\Domain\Repository\ResourceRepositoryInterface:
         alias: App\Resource\Infrastructure\Doctrine\ResourceRepository
+
+    App\Reservation\Domain\Repository\ReservationRepositoryInterface:
+        alias: App\Reservation\Infrastructure\Doctrine\ReservationRepository

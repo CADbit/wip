@@ -37,6 +37,12 @@ doctrine:
                 dir: '%kernel.project_dir%/src/Resource/Domain/Entity'
                 prefix: 'App\Resource\Domain\Entity'
                 alias: Resource
+            Reservation:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Reservation/Domain/Entity'
+                prefix: 'App\Reservation\Domain\Entity'
+                alias: Reservation
         controller_resolver:
             auto_mapping: false
 
