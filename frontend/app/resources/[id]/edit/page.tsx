@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { getResource, updateResource } from '@/lib/api';
+import { getResource, updateResource, ApiException } from '@/lib/api';
 
 export default function EditResourcePage() {
   const router = useRouter();
@@ -15,6 +15,8 @@ export default function EditResourcePage() {
     description: '',
     status: 'active',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   useEffect(() => {
     loadResource();
@@ -30,7 +32,11 @@ export default function EditResourcePage() {
       });
     } catch (error) {
       console.error('Błąd ładowania zasobu:', error);
-      alert('Nie udało się załadować sali');
+      if (error instanceof ApiException) {
+        alert(`Błąd: ${error.message}`);
+      } else {
+        alert('Nie udało się załadować sali');
+      }
       router.push('/resources');
     } finally {
       setLoading(false);
@@ -40,6 +46,8 @@ export default function EditResourcePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setErrors({});
+    setErrorMessage('');
 
     try {
       await updateResource(id, {
@@ -50,8 +58,19 @@ export default function EditResourcePage() {
       router.push('/resources');
     } catch (error) {
       console.error('Błąd aktualizacji zasobu:', error);
-      alert('Nie udało się zaktualizować sali');
       setSaving(false);
+      if (error instanceof ApiException) {
+        setErrorMessage(error.message);
+        if (error.errors) {
+          const fieldErrors: Record<string, string> = {};
+          Object.entries(error.errors).forEach(([key, value]) => {
+            fieldErrors[key] = Array.isArray(value) ? value[0] : value;
+          });
+          setErrors(fieldErrors);
+        }
+      } else {
+        setErrorMessage('Nie udało się zaktualizować sali. Spróbuj ponownie.');
+      }
     }
   };
 
@@ -69,6 +88,11 @@ export default function EditResourcePage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Edytuj Salę Konferencyjną</h1>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
+          {errorMessage && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+              <div className="text-sm text-red-800">{errorMessage}</div>
+            </div>
+          )}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Nazwa *
@@ -77,9 +101,21 @@ export default function EditResourcePage() {
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value });
+                if (errors.name) {
+                  setErrors({ ...errors, name: '' });
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                errors.name 
+                  ? 'border-red-300 focus:ring-red-500' 
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
             />
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+            )}
           </div>
 
           <div className="mb-4">
@@ -100,12 +136,24 @@ export default function EditResourcePage() {
             </label>
             <select
               value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setFormData({ ...formData, status: e.target.value });
+                if (errors.status) {
+                  setErrors({ ...errors, status: '' });
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                errors.status 
+                  ? 'border-red-300 focus:ring-red-500' 
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
             >
               <option value="active">Aktywna</option>
               <option value="disabled">Nieaktywna</option>
             </select>
+            {errors.status && (
+              <p className="mt-1 text-sm text-red-600">{errors.status}</p>
+            )}
           </div>
 
           <div className="flex gap-4">

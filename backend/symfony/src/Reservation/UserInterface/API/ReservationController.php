@@ -9,6 +9,7 @@ use App\Reservation\Domain\Entity\Reservation;
 use App\Reservation\Domain\Repository\ReservationRepositoryInterface;
 use App\Reservation\Domain\ValueObject\DateTimeRange;
 use App\Resource\Domain\Repository\ResourceRepositoryInterface;
+use App\UserInterface\API\ApiResponseHelper;
 use DateTimeImmutable;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -34,28 +35,35 @@ class ReservationController extends AbstractController
         $data = json_decode($request->getContent(), true);
 
         if (!$data) {
-            return new JsonResponse(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
+            return ApiResponseHelper::error('Invalid JSON', [], Response::HTTP_BAD_REQUEST);
         }
 
         // Walidacja wymaganych pól
         $requiredFields = ['resourceId', 'reservedBy', 'startDate', 'endDate'];
+        $missingFields = [];
         foreach ($requiredFields as $field) {
-            if (!isset($data[$field])) {
-                return new JsonResponse(['error' => "Missing required field: $field"], Response::HTTP_BAD_REQUEST);
+            if (!isset($data[$field]) || $data[$field] === '') {
+                $missingFields[$field] = "Pole '$field' jest wymagane";
             }
+        }
+        
+        if (!empty($missingFields)) {
+            return ApiResponseHelper::validationError('Brakuje wymaganych pól', $missingFields);
         }
 
         // Walidacja UUID zasobu
         try {
             $resourceUuid = Uuid::fromString($data['resourceId']);
         } catch (\InvalidArgumentException $e) {
-            return new JsonResponse(['error' => 'Invalid resource UUID format'], Response::HTTP_BAD_REQUEST);
+            return ApiResponseHelper::validationError('Nieprawidłowy format UUID zasobu', [
+                'resourceId' => 'Nieprawidłowy format UUID'
+            ]);
         }
 
         // Sprawdzenie czy zasób istnieje
         $resource = $this->resourceRepository->findById($resourceUuid->toString());
         if (!$resource) {
-            return new JsonResponse(['error' => 'Resource not found'], Response::HTTP_NOT_FOUND);
+            return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
         }
 
         // Walidacja dat
@@ -63,14 +71,43 @@ class ReservationController extends AbstractController
             $startDate = new DateTimeImmutable($data['startDate']);
             $endDate = new DateTimeImmutable($data['endDate']);
         } catch (\Exception $e) {
-            return new JsonResponse(['error' => 'Invalid date format'], Response::HTTP_BAD_REQUEST);
+            return ApiResponseHelper::validationError('Nieprawidłowy format daty', [
+                'startDate' => 'Nieprawidłowy format daty rozpoczęcia',
+                'endDate' => 'Nieprawidłowy format daty zakończenia'
+            ]);
         }
 
         // Utworzenie DateTimeRange
         try {
             $period = new DateTimeRange($startDate, $endDate);
         } catch (\Exception $e) {
-            return new JsonResponse(['error' => 'Invalid date range: end date must be after start date'], Response::HTTP_BAD_REQUEST);
+            return ApiResponseHelper::validationError('Nieprawidłowy zakres dat', [
+                'endDate' => 'Data zakończenia musi być późniejsza niż data rozpoczęcia'
+            ]);
+        }
+
+        // Sprawdzenie konfliktów z istniejącymi rezerwacjami
+        $existingReservations = $this->reservationRepository->findByResourceId($resourceUuid->toString());
+        $conflicts = [];
+        foreach ($existingReservations as $existingReservation) {
+            if ($period->overlaps($existingReservation->period)) {
+                $conflicts[] = [
+                    'startDate' => $existingReservation->period->start()->format('Y-m-d H:i:s'),
+                    'endDate' => $existingReservation->period->end()->format('Y-m-d H:i:s'),
+                    'reservedBy' => $existingReservation->reservedBy,
+                ];
+            }
+        }
+        
+        if (!empty($conflicts)) {
+            return ApiResponseHelper::validationError(
+                'Wybrany termin koliduje z istniejącymi rezerwacjami',
+                [
+                    'startDate' => 'Termin koliduje z istniejącymi rezerwacjami',
+                    'endDate' => 'Termin koliduje z istniejącymi rezerwacjami',
+                    'conflicts' => $conflicts
+                ]
+            );
         }
 
         $command = new CreateReservationCommand(
@@ -82,16 +119,13 @@ class ReservationController extends AbstractController
 
         $this->messageBus->dispatch($command);
 
-        return new JsonResponse([
-            'message' => 'Reservation created successfully',
-            'data' => [
-                'id' => $command->id->toString(),
-                'resourceId' => $resource->id->toString(),
-                'reservedBy' => $command->reservedBy,
-                'startDate' => $period->start()->format('Y-m-d H:i:s'),
-                'endDate' => $period->end()->format('Y-m-d H:i:s'),
-            ]
-        ], Response::HTTP_CREATED);
+        return ApiResponseHelper::success([
+            'id' => $command->id->toString(),
+            'resourceId' => $resource->id->toString(),
+            'reservedBy' => $command->reservedBy,
+            'startDate' => $period->start()->format('Y-m-d H:i:s'),
+            'endDate' => $period->end()->format('Y-m-d H:i:s'),
+        ], 'Rezerwacja została utworzona pomyślnie', Response::HTTP_CREATED);
     }
 
     #[Route('/{id}', name: 'show', methods: ['GET'])]
@@ -100,16 +134,18 @@ class ReservationController extends AbstractController
         try {
             $uuid = Uuid::fromString($id);
         } catch (\InvalidArgumentException $e) {
-            return new JsonResponse(['error' => 'Invalid UUID format'], Response::HTTP_BAD_REQUEST);
+            return ApiResponseHelper::validationError('Nieprawidłowy format UUID', [
+                'id' => 'Nieprawidłowy format UUID'
+            ]);
         }
 
         $reservation = $this->reservationRepository->findById($uuid->toString());
 
         if (!$reservation) {
-            return new JsonResponse(['error' => 'Reservation not found'], Response::HTTP_NOT_FOUND);
+            return ApiResponseHelper::error('Rezerwacja nie została znaleziona', [], Response::HTTP_NOT_FOUND);
         }
 
-        return new JsonResponse(['data' => $this->serializeReservation($reservation)]);
+        return ApiResponseHelper::success($this->serializeReservation($reservation));
     }
 
     #[Route('/{id}', name: 'cancel', methods: ['DELETE'])]
@@ -118,19 +154,21 @@ class ReservationController extends AbstractController
         try {
             $uuid = Uuid::fromString($id);
         } catch (\InvalidArgumentException $e) {
-            return new JsonResponse(['error' => 'Invalid UUID format'], Response::HTTP_BAD_REQUEST);
+            return ApiResponseHelper::validationError('Nieprawidłowy format UUID', [
+                'id' => 'Nieprawidłowy format UUID'
+            ]);
         }
 
         $reservation = $this->reservationRepository->findById($uuid->toString());
 
         if (!$reservation) {
-            return new JsonResponse(['error' => 'Reservation not found'], Response::HTTP_NOT_FOUND);
+            return ApiResponseHelper::error('Rezerwacja nie została znaleziona', [], Response::HTTP_NOT_FOUND);
         }
 
         $this->reservationRepository->remove($reservation);
         $this->reservationRepository->flush();
 
-        return new JsonResponse(['message' => 'Reservation cancelled successfully'], Response::HTTP_OK);
+        return ApiResponseHelper::success(null, 'Rezerwacja została anulowana pomyślnie');
     }
 
     #[Route('/resource/{resourceId}', name: 'list_by_resource', methods: ['GET'])]
@@ -139,21 +177,22 @@ class ReservationController extends AbstractController
         try {
             $resourceUuid = Uuid::fromString($resourceId);
         } catch (\InvalidArgumentException $e) {
-            return new JsonResponse(['error' => 'Invalid resource UUID format'], Response::HTTP_BAD_REQUEST);
+            return ApiResponseHelper::validationError('Nieprawidłowy format UUID zasobu', [
+                'resourceId' => 'Nieprawidłowy format UUID'
+            ]);
         }
 
         // Sprawdzenie czy zasób istnieje
         $resource = $this->resourceRepository->findById($resourceUuid->toString());
         if (!$resource) {
-            return new JsonResponse(['error' => 'Resource not found'], Response::HTTP_NOT_FOUND);
+            return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
         }
 
         $reservations = $this->reservationRepository->findByResourceId($resourceUuid->toString());
 
-        return new JsonResponse([
-            'data' => array_map(fn(Reservation $reservation) => $this->serializeReservation($reservation), $reservations),
-            'count' => count($reservations),
-        ]);
+        return ApiResponseHelper::success(
+            array_map(fn(Reservation $reservation) => $this->serializeReservation($reservation), $reservations)
+        );
     }
 
     private function serializeReservation(Reservation $reservation): array

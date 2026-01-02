@@ -20,16 +20,66 @@ export interface Reservation {
   createdAt: string;
 }
 
+export interface ApiError {
+  error: boolean;
+  message: string;
+  errors?: Record<string, string | string[]>;
+}
+
+export interface ApiSuccessResponse<T> {
+  data?: T;
+  message?: string;
+}
+
+export class ApiException extends Error {
+  constructor(
+    public message: string,
+    public statusCode: number,
+    public errors?: Record<string, string | string[]>
+  ) {
+    super(message);
+    this.name = 'ApiException';
+  }
+}
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  const contentType = response.headers.get('content-type');
+  const isJson = contentType && contentType.includes('application/json');
+  
+  if (!isJson) {
+    if (!response.ok) {
+      throw new ApiException(
+        `Błąd serwera: ${response.statusText}`,
+        response.status
+      );
+    }
+    return {} as T;
+  }
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorData = data as ApiError;
+    throw new ApiException(
+      errorData.message || 'Wystąpił błąd',
+      response.status,
+      errorData.errors
+    );
+  }
+
+  // Success response
+  const successData = data as ApiSuccessResponse<T>;
+  return (successData.data ?? successData) as T;
+}
+
 export async function getResources(): Promise<Resource[]> {
   const response = await fetch(`${API_URL}/api/resources/conference-rooms`);
-  const data = await response.json();
-  return data.data || [];
+  return handleResponse<Resource[]>(response);
 }
 
 export async function getResource(id: string): Promise<Resource> {
   const response = await fetch(`${API_URL}/api/resources/${id}`);
-  const data = await response.json();
-  return data.data;
+  return handleResponse<Resource>(response);
 }
 
 export async function createResource(resource: {
@@ -43,8 +93,7 @@ export async function createResource(resource: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(resource),
   });
-  const data = await response.json();
-  return data.data;
+  return handleResponse<Resource>(response);
 }
 
 export async function updateResource(
@@ -60,20 +109,20 @@ export async function updateResource(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(resource),
   });
-  const data = await response.json();
-  return data.data;
+  return handleResponse<Resource>(response);
 }
 
 export async function deleteResource(id: string): Promise<void> {
-  await fetch(`${API_URL}/api/resources/${id}`, {
+  const response = await fetch(`${API_URL}/api/resources/${id}`, {
     method: 'DELETE',
   });
+  await handleResponse<void>(response);
 }
 
 export async function getReservationsByResource(resourceId: string): Promise<Reservation[]> {
   const response = await fetch(`${API_URL}/api/reservations/resource/${resourceId}`);
-  const data = await response.json();
-  return data.data || [];
+  const data = await handleResponse<Reservation[]>(response);
+  return Array.isArray(data) ? data : [];
 }
 
 export async function createReservation(reservation: {
@@ -87,13 +136,13 @@ export async function createReservation(reservation: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(reservation),
   });
-  const data = await response.json();
-  return data.data;
+  return handleResponse<Reservation>(response);
 }
 
 export async function cancelReservation(id: string): Promise<void> {
-  await fetch(`${API_URL}/api/reservations/${id}`, {
+  const response = await fetch(`${API_URL}/api/reservations/${id}`, {
     method: 'DELETE',
   });
+  await handleResponse<void>(response);
 }
 

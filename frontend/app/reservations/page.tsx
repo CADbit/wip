@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getResources, getReservationsByResource, createReservation, cancelReservation, type Resource, type Reservation } from '@/lib/api';
+import { getResources, getReservationsByResource, createReservation, cancelReservation, type Resource, type Reservation, ApiException } from '@/lib/api';
 
 export default function ReservationsPage() {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -16,6 +16,8 @@ export default function ReservationsPage() {
     startDate: '',
     endDate: '',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   useEffect(() => {
     loadResources();
@@ -54,6 +56,9 @@ export default function ReservationsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+    setErrorMessage('');
+    
     try {
       // Konwersja formatu daty z datetime-local (YYYY-MM-DDTHH:mm) na format backendu (YYYY-MM-DD HH:mm:ss)
       const formatDateForBackend = (dateString: string) => {
@@ -73,10 +78,38 @@ export default function ReservationsPage() {
         startDate: '',
         endDate: '',
       });
+      setErrors({});
+      setErrorMessage('');
       await loadReservations(selectedResource);
     } catch (error) {
       console.error('Błąd tworzenia rezerwacji:', error);
-      alert('Nie udało się utworzyć rezerwacji');
+      if (error instanceof ApiException) {
+        setErrorMessage(error.message);
+        if (error.errors) {
+          const fieldErrors: Record<string, string> = {};
+          Object.entries(error.errors).forEach(([key, value]) => {
+            if (key !== 'conflicts') {
+              fieldErrors[key] = Array.isArray(value) ? value[0] : value;
+            }
+          });
+          setErrors(fieldErrors);
+          
+          // Jeśli są konflikty, wyświetl je w szczegółowej wiadomości
+          if (error.errors.conflicts) {
+            const conflicts = Array.isArray(error.errors.conflicts) 
+              ? error.errors.conflicts 
+              : [error.errors.conflicts];
+            const conflictsText = conflicts.map((c: any) => 
+              `${c.reservedBy}: ${new Date(c.startDate).toLocaleString('pl-PL')} - ${new Date(c.endDate).toLocaleString('pl-PL')}`
+            ).join('\n');
+            setErrorMessage(`${error.message}\n\nKonfliktujące rezerwacje:\n${conflictsText}`);
+          }
+        } else {
+          setErrorMessage(error.message);
+        }
+      } else {
+        setErrorMessage('Nie udało się utworzyć rezerwacji. Spróbuj ponownie.');
+      }
     }
   };
 
@@ -87,7 +120,11 @@ export default function ReservationsPage() {
       await loadReservations(selectedResource);
     } catch (error) {
       console.error('Błąd anulowania:', error);
-      alert('Nie udało się anulować rezerwacji');
+      if (error instanceof ApiException) {
+        alert(`Błąd: ${error.message}`);
+      } else {
+        alert('Nie udało się anulować rezerwacji');
+      }
     }
   };
 
@@ -144,6 +181,11 @@ export default function ReservationsPage() {
         {showForm && (
           <div className="bg-white rounded-lg shadow p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Nowa Rezerwacja</h2>
+            {errorMessage && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+                <div className="text-sm text-red-800 whitespace-pre-line">{errorMessage}</div>
+              </div>
+            )}
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
@@ -154,9 +196,21 @@ export default function ReservationsPage() {
                     type="text"
                     required
                     value={formData.reservedBy}
-                    onChange={(e) => setFormData({ ...formData, reservedBy: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => {
+                      setFormData({ ...formData, reservedBy: e.target.value });
+                      if (errors.reservedBy) {
+                        setErrors({ ...errors, reservedBy: '' });
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                      errors.reservedBy 
+                        ? 'border-red-300 focus:ring-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500'
+                    }`}
                   />
+                  {errors.reservedBy && (
+                    <p className="mt-1 text-sm text-red-600">{errors.reservedBy}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -166,9 +220,21 @@ export default function ReservationsPage() {
                     type="datetime-local"
                     required
                     value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => {
+                      setFormData({ ...formData, startDate: e.target.value });
+                      if (errors.startDate) {
+                        setErrors({ ...errors, startDate: '' });
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                      errors.startDate 
+                        ? 'border-red-300 focus:ring-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500'
+                    }`}
                   />
+                  {errors.startDate && (
+                    <p className="mt-1 text-sm text-red-600">{errors.startDate}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -178,9 +244,21 @@ export default function ReservationsPage() {
                     type="datetime-local"
                     required
                     value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => {
+                      setFormData({ ...formData, endDate: e.target.value });
+                      if (errors.endDate) {
+                        setErrors({ ...errors, endDate: '' });
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                      errors.endDate 
+                        ? 'border-red-300 focus:ring-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500'
+                    }`}
                   />
+                  {errors.endDate && (
+                    <p className="mt-1 text-sm text-red-600">{errors.endDate}</p>
+                  )}
                 </div>
               </div>
               <div className="flex gap-4">
@@ -192,7 +270,11 @@ export default function ReservationsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={() => {
+                    setShowForm(false);
+                    setErrors({});
+                    setErrorMessage('');
+                  }}
                   className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
                 >
                   Anuluj

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getResources, deleteResource, type Resource } from '@/lib/api';
+import { getResources, deleteResource, type Resource, ApiException } from '@/lib/api';
 
 export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -30,7 +30,11 @@ export default function ResourcesPage() {
       await loadResources();
     } catch (error) {
       console.error('Błąd usuwania:', error);
-      alert('Nie udało się usunąć sali');
+      if (error instanceof ApiException) {
+        alert(`Błąd: ${error.message}`);
+      } else {
+        alert('Nie udało się usunąć sali');
+      }
     }
   };
 

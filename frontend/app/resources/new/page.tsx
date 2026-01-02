@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createResource } from '@/lib/api';
+import { createResource, ApiException } from '@/lib/api';
 
 export default function NewResourcePage() {
   const router = useRouter();
@@ -12,10 +12,14 @@ export default function NewResourcePage() {
     description: '',
     status: 'active',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrors({});
+    setErrorMessage('');
 
     try {
       await createResource({
@@ -27,8 +31,19 @@ export default function NewResourcePage() {
       router.push('/resources');
     } catch (error) {
       console.error('Błąd tworzenia zasobu:', error);
-      alert('Nie udało się utworzyć sali');
       setLoading(false);
+      if (error instanceof ApiException) {
+        setErrorMessage(error.message);
+        if (error.errors) {
+          const fieldErrors: Record<string, string> = {};
+          Object.entries(error.errors).forEach(([key, value]) => {
+            fieldErrors[key] = Array.isArray(value) ? value[0] : value;
+          });
+          setErrors(fieldErrors);
+        }
+      } else {
+        setErrorMessage('Nie udało się utworzyć sali. Spróbuj ponownie.');
+      }
     }
   };
 
@@ -38,6 +53,11 @@ export default function NewResourcePage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Dodaj Salę Konferencyjną</h1>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
+          {errorMessage && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+              <div className="text-sm text-red-800">{errorMessage}</div>
+            </div>
+          )}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Nazwa *
@@ -46,9 +66,21 @@ export default function NewResourcePage() {
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value });
+                if (errors.name) {
+                  setErrors({ ...errors, name: '' });
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                errors.name 
+                  ? 'border-red-300 focus:ring-red-500' 
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
             />
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+            )}
           </div>
 
           <div className="mb-4">
@@ -69,12 +101,24 @@ export default function NewResourcePage() {
             </label>
             <select
               value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => {
+                setFormData({ ...formData, status: e.target.value });
+                if (errors.status) {
+                  setErrors({ ...errors, status: '' });
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                errors.status 
+                  ? 'border-red-300 focus:ring-red-500' 
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
             >
               <option value="active">Aktywna</option>
               <option value="disabled">Nieaktywna</option>
             </select>
+            {errors.status && (
+              <p className="mt-1 text-sm text-red-600">{errors.status}</p>
+            )}
           </div>
 
           <div className="flex gap-4">
