@@ -9,6 +9,7 @@ doctrine:
         profiling_collect_backtrace: '%kernel.debug%'
         use_savepoints: true
         types:
+            uuid: Symfony\Bridge\Doctrine\Types\UuidType
             resource_type: App\Resource\Infrastructure\Doctrine\Type\ResourceTypeType
             resource_status: App\Resource\Infrastructure\Doctrine\Type\ResourceStatusType
             resource_unavailability: App\Resource\Infrastructure\Doctrine\Type\ResourceUnavailabilityType
