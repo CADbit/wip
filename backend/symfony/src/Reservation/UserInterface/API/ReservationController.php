@@ -171,6 +171,16 @@ class ReservationController extends AbstractController
         return ApiResponseHelper::success(null, 'Rezerwacja została anulowana pomyślnie');
     }
 
+    #[Route('', name: 'list', methods: ['GET'])]
+    public function list(): JsonResponse
+    {
+        $reservations = $this->reservationRepository->findAll();
+
+        return ApiResponseHelper::success(
+            array_map(fn(Reservation $reservation) => $this->serializeReservation($reservation), $reservations)
+        );
+    }
+
     #[Route('/resource/{resourceId}', name: 'list_by_resource', methods: ['GET'])]
     public function listByResource(string $resourceId): JsonResponse
     {

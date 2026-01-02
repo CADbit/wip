@@ -119,6 +119,12 @@ export async function deleteResource(id: string): Promise<void> {
   await handleResponse<void>(response);
 }
 
+export async function getAllReservations(): Promise<Reservation[]> {
+  const response = await fetch(`${API_URL}/api/reservations`);
+  const data = await handleResponse<Reservation[]>(response);
+  return Array.isArray(data) ? data : [];
+}
+
 export async function getReservationsByResource(resourceId: string): Promise<Reservation[]> {
   const response = await fetch(`${API_URL}/api/reservations/resource/${resourceId}`);
   const data = await handleResponse<Reservation[]>(response);

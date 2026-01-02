@@ -1,36 +1,59 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from "next/link";
+import Calendar from '@/components/Calendar';
+import { getAllReservations, type Reservation } from '@/lib/api';
 
 export default function Home() {
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadReservations();
+  }, []);
+
+  const loadReservations = async () => {
+    try {
+      const data = await getAllReservations();
+      setReservations(data);
+    } catch (error) {
+      console.error('Błąd ładowania rezerwacji:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">
-          Panel Administracyjny - Rezerwacje
-        </h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Link
-            href="/resources"
-            className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
-          >
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Panel Administracyjny - Rezerwacje
+          </h1>
+          <div className="flex gap-4">
+            <Link
+              href="/resources"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Sale Konferencyjne
-            </h2>
-            <p className="text-gray-600">
-              Zarządzaj salami konferencyjnymi
-            </p>
-          </Link>
-          <Link
-            href="/reservations"
-            className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
-          >
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">
-              Kalendarz Rezerwacji
-            </h2>
-            <p className="text-gray-600">
-              Przeglądaj i zarządzaj rezerwacjami
-            </p>
-          </Link>
+            </Link>
+            <Link
+              href="/reservations"
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Zarządzaj Rezerwacjami
+            </Link>
+          </div>
         </div>
+
+        {loading ? (
+          <div className="bg-white rounded-lg shadow p-12 text-center">
+            <div className="text-gray-600">Ładowanie kalendarza...</div>
+          </div>
+        ) : (
+          <Calendar reservations={reservations} />
+        )}
       </div>
     </div>
   );
