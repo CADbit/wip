@@ -58,9 +58,36 @@ class ReservationRepository extends ServiceEntityRepository implements Reservati
     public function findByResourceId(string $resourceId): array
     {
         return $this->createQueryBuilder('r')
-            ->where('r.resource = :resourceId')
+            ->join('r.resource', 'res')
+            ->where('res.id = :resourceId')
             ->setParameter('resourceId', $resourceId)
             ->getQuery()
             ->getResult();
+    }
+
+    /** @return Reservation[] */
+    public function findByResourceIdAndDate(string $resourceId, \DateTimeImmutable $date): array
+    {
+        $startOfDay = $date->setTime(0, 0, 0);
+        $endOfDay = $date->setTime(23, 59, 59, 999999);
+
+        $startFormatted = $startOfDay->format('Y-m-d H:i:s.uP');
+        $endFormatted = $endOfDay->format('Y-m-d H:i:s.uP');
+        $dayRange = sprintf('[%s,%s)', $startFormatted, $endFormatted);
+
+        $reservations = $this->createQueryBuilder('r')
+            ->join('r.resource', 'res')
+            ->where('res.id = :resourceId')
+            ->andWhere("r.period && CAST(:dayRange AS tstzrange)")
+            ->setParameter('resourceId', $resourceId)
+            ->setParameter('dayRange', $dayRange)
+            ->getQuery()
+            ->getResult();
+
+        usort($reservations, function (Reservation $a, Reservation $b) {
+            return $a->period->start() <=> $b->period->start();
+        });
+
+        return $reservations;
     }
 }

@@ -11,6 +11,8 @@ use App\Reservation\Domain\ValueObject\DateTimeRange;
 use App\Resource\Domain\Repository\ResourceRepositoryInterface;
 use App\UserInterface\API\ApiResponseHelper;
 use DateTimeImmutable;
+use Exception;
+use InvalidArgumentException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -46,7 +48,7 @@ class ReservationController extends AbstractController
                 $missingFields[$field] = "Pole '$field' jest wymagane";
             }
         }
-        
+
         if (!empty($missingFields)) {
             return ApiResponseHelper::validationError('Brakuje wymaganych pól', $missingFields);
         }
@@ -98,7 +100,7 @@ class ReservationController extends AbstractController
                 ];
             }
         }
-        
+
         if (!empty($conflicts)) {
             return ApiResponseHelper::validationError(
                 'Wybrany termin koliduje z istniejącymi rezerwacjami',
@@ -199,6 +201,39 @@ class ReservationController extends AbstractController
         }
 
         $reservations = $this->reservationRepository->findByResourceId($resourceUuid->toString());
+
+        return ApiResponseHelper::success(
+            array_map(fn(Reservation $reservation) => $this->serializeReservation($reservation), $reservations)
+        );
+    }
+
+    #[Route('/resource/{resourceId}/date/{date}', name: 'list_by_resource_and_date', methods: ['GET'])]
+    public function listByResourceAndDate(string $resourceId, string $date): JsonResponse
+    {
+        try {
+            $resourceUuid = Uuid::fromString($resourceId);
+        } catch (InvalidArgumentException $e) {
+            return ApiResponseHelper::validationError('Nieprawidłowy format UUID zasobu', [
+                'resourceId' => 'Nieprawidłowy format UUID'
+            ]);
+        }
+
+        // Sprawdzenie czy zasób istnieje
+        $resource = $this->resourceRepository->findById($resourceUuid->toString());
+        if (!$resource) {
+            return ApiResponseHelper::error('Zasób nie został znaleziony', [], Response::HTTP_NOT_FOUND);
+        }
+
+        // Walidacja daty
+        try {
+            $dateTime = new DateTimeImmutable($date);
+        } catch (Exception $e) {
+            return ApiResponseHelper::validationError('Nieprawidłowy format daty', [
+                'date' => 'Nieprawidłowy format daty. Oczekiwany format: Y-m-d (np. 2024-01-15)'
+            ]);
+        }
+
+        $reservations = $this->reservationRepository->findByResourceIdAndDate($resourceUuid->toString(), $dateTime);
 
         return ApiResponseHelper::success(
             array_map(fn(Reservation $reservation) => $this->serializeReservation($reservation), $reservations)

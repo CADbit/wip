@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Reservation\Domain\Repository;
 
 use App\Reservation\Domain\Entity\Reservation;
+use DateTimeImmutable;
 
 interface ReservationRepositoryInterface
 {
@@ -18,4 +19,7 @@ interface ReservationRepositoryInterface
 
     /** @return Reservation[] */
     public function findByResourceId(string $resourceId): array;
+
+    /** @return Reservation[] */
+    public function findByResourceIdAndDate(string $resourceId, DateTimeImmutable $date): array;
 }
