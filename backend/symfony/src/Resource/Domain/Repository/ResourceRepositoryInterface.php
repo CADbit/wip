@@ -15,4 +15,7 @@ interface ResourceRepositoryInterface
 
     /** @return Resource[] */
     public function findAllActive(): array;
+
+    /** @return Resource[] */
+    public function findAllConferenceRoomActive(): array;
 }
