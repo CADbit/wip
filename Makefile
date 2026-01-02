@@ -26,3 +26,19 @@ stop:
 restart:
 	$(MAKE) stop
 	$(MAKE) run
+
+frontend-install:
+	@echo "Instalowanie zależności frontendu..."
+	cd $(FRONTEND_DIR) && npm install
+
+frontend-dev:
+	@echo "Uruchamianie frontendu w trybie deweloperskim..."
+	cd $(FRONTEND_DIR) && npm run dev
+
+frontend-build:
+	@echo "Budowanie frontendu..."
+	cd $(FRONTEND_DIR) && npm run build
+
+frontend-start:
+	@echo "Uruchamianie frontendu w trybie produkcyjnym..."
+	cd $(FRONTEND_DIR) && npm start
