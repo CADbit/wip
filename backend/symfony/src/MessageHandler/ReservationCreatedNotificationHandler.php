@@ -16,6 +16,14 @@ class ReservationCreatedNotificationHandler
     ) {
     }
 
+    /**
+     *  Tutaj można dodać dodatkową logikę, np.:
+     *  - Wysyłanie emaili
+     *  - Wysyłanie powiadomień push
+     *  - Integracja z zewnętrznymi systemami
+     *  - Aktualizacja cache
+     *  - etc.
+     */
     public function __invoke(ReservationCreatedNotification $notification): void
     {
         $this->logger->info('Nowa rezerwacja utworzona', [
@@ -28,11 +36,6 @@ class ReservationCreatedNotificationHandler
             'createdAt' => $notification->createdAt,
         ]);
 
-        // Tutaj można dodać dodatkową logikę, np.:
-        // - Wysyłanie emaili
-        // - Wysyłanie powiadomień push
-        // - Integracja z zewnętrznymi systemami
-        // - Aktualizacja cache
-        // - etc.
+        // TODO: Tutaj wykonujemy akcje.
     }
 }
