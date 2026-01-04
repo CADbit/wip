@@ -44,6 +44,28 @@ class ReservationController extends AbstractController
     ) {
     }
 
+    /**
+     * Tworzy nową rezerwację dla wybranego zasobu.
+     *
+     * Endpoint przyjmuje dane rezerwacji w formacie JSON i tworzy nową rezerwację
+     * w systemie. Przed utworzeniem sprawdza, czy wybrany termin nie koliduje
+     * z istniejącymi rezerwacjami dla danego zasobu.
+     *
+     * @param Request $request Request HTTP zawierający dane rezerwacji w formacie JSON
+     *
+     * @return JsonResponse Odpowiedź JSON zawierająca:
+     *                      - Success (201): Dane utworzonej rezerwacji
+     *                      - Validation Error (400): Błędy walidacji lub konflikty czasowe
+     *                      - Not Found (404): Zasób nie został znaleziony
+     *
+     * Request body (JSON):
+     * {
+     *   "resourceId": "uuid-zasobu",
+     *   "reservedBy": "Jan Kowalski",
+     *   "startDate": "2024-01-15 10:00:00",
+     *   "endDate": "2024-01-15 12:00:00"
+     * }
+     */
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
@@ -67,7 +89,7 @@ class ReservationController extends AbstractController
                 ]);
             }
             $resourceUuid = Uuid::fromString($data['resourceId']);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format UUID zasobu', [
                 'resourceId' => 'Nieprawidłowy format UUID',
             ]);
@@ -88,7 +110,7 @@ class ReservationController extends AbstractController
             }
             $startDate = new DateTimeImmutable($data['startDate']);
             $endDate = new DateTimeImmutable($data['endDate']);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy format daty', [
                 'startDate' => 'Nieprawidłowy format daty rozpoczęcia',
                 'endDate' => 'Nieprawidłowy format daty zakończenia',
@@ -97,7 +119,7 @@ class ReservationController extends AbstractController
 
         try {
             $period = new DateTimeRange($startDate, $endDate);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ApiResponseHelper::validationError('Nieprawidłowy zakres dat', [
                 'endDate' => 'Data zakończenia musi być późniejsza niż data rozpoczęcia',
             ]);

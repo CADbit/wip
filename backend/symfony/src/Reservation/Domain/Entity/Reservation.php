@@ -13,6 +13,13 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
+/**
+ * Encja domenowa reprezentująca rezerwację zasobu.
+ *
+ * Rezerwacja łączy zasób (np. salę konferencyjną) z osobą rezerwującą
+ * i określonym zakresem czasu. Przy utworzeniu automatycznie publikuje
+ * zdarzenie domenowe ReservationCreated.
+ */
 #[ORM\Entity(repositoryClass: ReservationRepository::class)]
 #[ORM\Table(name: 'reservation')]
 class Reservation
@@ -35,6 +42,14 @@ class Reservation
     #[ORM\Column(type: 'datetime_immutable')]
     public DateTimeImmutable $createdAt;
 
+    /**
+     * Tworzy nową rezerwację.
+     *
+     * @param Uuid $id Unikalny identyfikator rezerwacji
+     * @param Resource $resource Zasób, dla którego tworzona jest rezerwacja
+     * @param string $reservedBy Nazwa osoby rezerwującej
+     * @param DateTimeRange $period Zakres dat i czasu rezerwacji
+     */
     public function __construct(
         Uuid $id,
         Resource $resource,
