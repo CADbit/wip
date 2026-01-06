@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Calendar as BigCalendar, momentLocalizer, View, ToolbarProps } from 'react-big-calendar';
 import moment from 'moment';
 import 'moment/locale/pl';
@@ -32,6 +32,16 @@ interface CalendarProps {
 export default function Calendar({ reservations }: CalendarProps) {
   const [currentView, setCurrentView] = useState<View>('week');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [calendarHeight, setCalendarHeight] = useState(600);
+
+  useEffect(() => {
+    const updateHeight = () => {
+      setCalendarHeight(window.innerWidth < 1024 ? 400 : 600);
+    };
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, []);
 
   const events: CalendarEvent[] = useMemo(() => {
     return reservations.map((reservation) => ({
@@ -60,32 +70,36 @@ export default function Calendar({ reservations }: CalendarProps) {
   const CustomToolbar = (props: ToolbarProps<CalendarEvent, object>) => {
     const { label, onNavigate, onView, view } = props;
     return (
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onNavigate('PREV')}
-            className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-700"
-          >
-            ← Poprzedni
-          </button>
-          <button
-            onClick={() => onNavigate('TODAY')}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded"
-          >
-            Dzisiaj
-          </button>
-          <button
-            onClick={() => onNavigate('NEXT')}
-            className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-700"
-          >
-            Następny →
-          </button>
+      <div className="mb-4 space-y-3 desktop:space-y-[10px]">
+        {/* Mobile: Title i Navigation */}
+        <div className="flex flex-col desktop:flex-row desktop:items-center desktop:justify-between gap-3 desktop:gap-0">
+          <h2 className="text-lg desktop:text-xl font-semibold text-gray-800 text-center desktop:text-left">{label}</h2>
+          <div className="flex items-center justify-center desktop:justify-start gap-2">
+            <button
+              onClick={() => onNavigate('PREV')}
+              className="px-2 desktop:px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-700 text-sm desktop:text-base"
+            >
+              ← Poprzedni
+            </button>
+            <button
+              onClick={() => onNavigate('TODAY')}
+              className="px-2 desktop:px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm desktop:text-base"
+            >
+              Dzisiaj
+            </button>
+            <button
+              onClick={() => onNavigate('NEXT')}
+              className="px-2 desktop:px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-700 text-sm desktop:text-base"
+            >
+              Następny →
+            </button>
+          </div>
         </div>
-        <h2 className="text-xl font-semibold text-gray-800">{label}</h2>
-        <div className="flex gap-2">
+        {/* View buttons */}
+        <div className="flex gap-2 justify-center desktop:justify-end">
           <button
             onClick={() => onView('day')}
-            className={`px-3 py-1 rounded ${
+            className={`px-2 desktop:px-3 py-1 rounded text-sm desktop:text-base ${
               view === 'day'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
@@ -95,7 +109,7 @@ export default function Calendar({ reservations }: CalendarProps) {
           </button>
           <button
             onClick={() => onView('week')}
-            className={`px-3 py-1 rounded ${
+            className={`px-2 desktop:px-3 py-1 rounded text-sm desktop:text-base ${
               view === 'week'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
@@ -105,7 +119,7 @@ export default function Calendar({ reservations }: CalendarProps) {
           </button>
           <button
             onClick={() => onView('month')}
-            className={`px-3 py-1 rounded ${
+            className={`px-2 desktop:px-3 py-1 rounded text-sm desktop:text-base ${
               view === 'month'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
@@ -144,7 +158,7 @@ export default function Calendar({ reservations }: CalendarProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-white rounded-lg shadow p-3 desktop:p-6">
       <BigCalendar
         localizer={localizer}
         events={events}
@@ -172,7 +186,7 @@ export default function Calendar({ reservations }: CalendarProps) {
           event: 'Wydarzenie',
           noEventsInRange: 'Brak rezerwacji w tym okresie',
         }}
-        style={{ height: 600 }}
+        style={{ height: calendarHeight }}
       />
     </div>
   );

@@ -40,26 +40,70 @@ export default function ResourcesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-8 flex items-center justify-center">
+      <div className="min-h-screen p-4 desktop:p-8 flex items-center justify-center">
         <div className="text-gray-600">Ładowanie...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-4 desktop:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Sale Konferencyjne</h1>
+        <div className="flex flex-col desktop:flex-row desktop:justify-between desktop:items-center gap-4 desktop:gap-0 mb-6 desktop:mb-8">
+          <h1 className="text-2xl desktop:text-3xl font-bold text-gray-900">Sale Konferencyjne</h1>
           <Link
             href="/resources/new"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center desktop:text-left w-full desktop:w-auto"
           >
             + Dodaj Salę
           </Link>
         </div>
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        {/* Mobile: Karty */}
+        <div className="desktop:hidden space-y-4">
+          {resources.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
+              Brak sal konferencyjnych
+            </div>
+          ) : (
+            resources.map((resource) => (
+              <div key={resource.id} className="bg-white rounded-lg shadow p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900">{resource.name}</h3>
+                  <span
+                    className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${
+                      resource.status === 'active'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    {resource.status === 'active' ? 'Aktywna' : 'Nieaktywna'}
+                  </span>
+                </div>
+                {resource.description && (
+                  <p className="text-sm text-gray-500 mb-4">{resource.description}</p>
+                )}
+                <div className="flex gap-3">
+                  <Link
+                    href={`/resources/${resource.id}/edit`}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center text-sm"
+                  >
+                    Edytuj
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(resource.id)}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                  >
+                    Usuń
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop: Tabela */}
+        <div className="hidden desktop:block bg-white rounded-lg shadow overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -125,10 +169,10 @@ export default function ResourcesPage() {
           </table>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-6 desktop:mt-4">
           <Link
             href="/"
-            className="text-blue-600 hover:text-blue-800"
+            className="text-blue-600 hover:text-blue-800 text-sm desktop:text-base"
           >
             ← Powrót do głównej
           </Link>

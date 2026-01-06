@@ -76,18 +76,18 @@ export default function EditResourcePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-8 flex items-center justify-center">
+      <div className="min-h-screen p-4 desktop:p-8 flex items-center justify-center">
         <div className="text-gray-600">Ładowanie...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-4 desktop:p-8">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Edytuj Salę Konferencyjną</h1>
+        <h1 className="text-2xl desktop:text-3xl font-bold text-gray-900 mb-6 desktop:mb-8">Edytuj Salę Konferencyjną</h1>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
+        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-4 desktop:p-6">
           {errorMessage && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
               <div className="text-sm text-red-800">{errorMessage}</div>
@@ -156,18 +156,18 @@ export default function EditResourcePage() {
             )}
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex flex-col desktop:flex-row gap-3 desktop:gap-4">
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors w-full desktop:w-auto"
             >
               {saving ? 'Zapisywanie...' : 'Zapisz'}
             </button>
             <button
               type="button"
               onClick={() => router.back()}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors w-full desktop:w-auto"
             >
               Anuluj
             </button>

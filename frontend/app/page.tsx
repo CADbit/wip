@@ -25,22 +25,22 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-4 desktop:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+        <div className="flex flex-col desktop:flex-row desktop:justify-between desktop:items-center gap-4 desktop:gap-[10px] mb-6 desktop:mb-8">
+          <h1 className="text-2xl desktop:text-3xl font-bold text-gray-900">
             Panel Administracyjny - Rezerwacje
           </h1>
-          <div className="flex gap-4">
+          <div className="flex flex-col desktop:flex-row gap-2 desktop:gap-4 w-full desktop:w-auto">
             <Link
               href="/resources"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center desktop:text-left"
             >
               Sale Konferencyjne
             </Link>
             <Link
               href="/reservations"
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-center desktop:text-left"
             >
               Zarządzaj Rezerwacjami
             </Link>

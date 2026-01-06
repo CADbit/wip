@@ -112,7 +112,7 @@ export default function DateTimePicker({
         {label}
       </label>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 desktop:grid-cols-2 gap-4">
         {/* Date picker */}
         <div>
           <input

@@ -238,21 +238,21 @@ export default function ReservationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-8 flex items-center justify-center">
+      <div className="min-h-screen p-4 desktop:p-8 flex items-center justify-center">
         <div className="text-gray-600">Ładowanie...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-4 desktop:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Kalendarz Rezerwacji</h1>
+        <div className="flex flex-col desktop:flex-row desktop:justify-between desktop:items-center gap-4 desktop:gap-0 mb-6 desktop:mb-8">
+          <h1 className="text-2xl desktop:text-3xl font-bold text-gray-900">Kalendarz Rezerwacji</h1>
           <button
             onClick={openForm}
             disabled={!selectedResource}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full desktop:w-auto"
           >
             + Dodaj Rezerwację
           </button>
@@ -277,15 +277,15 @@ export default function ReservationsPage() {
         </div>
 
         {showForm && (
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Nowa Rezerwacja</h2>
+          <div className="bg-white rounded-lg shadow p-4 desktop:p-6 mb-6">
+            <h2 className="text-lg desktop:text-xl font-semibold mb-4">Nowa Rezerwacja</h2>
             {errorMessage && (
-              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-                <div className="text-sm text-red-800 whitespace-pre-line">{errorMessage}</div>
+              <div className="mb-4 p-3 desktop:p-4 bg-red-50 border border-red-200 rounded-md">
+                <div className="text-xs desktop:text-sm text-red-800 whitespace-pre-line">{errorMessage}</div>
               </div>
             )}
             <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 desktop:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Rezerwujący *
@@ -358,10 +358,10 @@ export default function ReservationsPage() {
                   />
                 </div>
               </div>
-              <div className="flex gap-4">
+              <div className="flex flex-col desktop:flex-row gap-3 desktop:gap-4">
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full desktop:w-auto"
                 >
                   Zapisz
                 </button>
@@ -373,7 +373,7 @@ export default function ReservationsPage() {
                     setErrorMessage('');
                     setDayReservations([]);
                   }}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors w-full desktop:w-auto"
                 >
                   Anuluj
                 </button>
@@ -384,67 +384,93 @@ export default function ReservationsPage() {
 
         {selectedResource && (
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">
+            <div className="px-4 desktop:px-6 py-3 desktop:py-4 bg-gray-50 border-b border-gray-200">
+              <h2 className="text-base desktop:text-lg font-semibold text-gray-900">
                 Rezerwacje dla: {resources.find(r => r.id === selectedResource)?.name}
               </h2>
             </div>
             {reservations.length === 0 ? (
-              <div className="px-6 py-8 text-center text-gray-500">
+              <div className="px-4 desktop:px-6 py-6 desktop:py-8 text-center text-gray-500 text-sm desktop:text-base">
                 Brak rezerwacji dla tej sali
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Rezerwujący
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Data rozpoczęcia
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Data zakończenia
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Akcje
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {reservations.map((reservation) => (
-                      <tr key={reservation.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+              <>
+                {/* Mobile: Karty */}
+                <div className="desktop:hidden divide-y divide-gray-200">
+                  {reservations.map((reservation) => (
+                    <div key={reservation.id} className="p-4">
+                      <div className="mb-3">
+                        <div className="text-sm font-medium text-gray-900 mb-1">
                           {reservation.reservedBy}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(reservation.startDate).toLocaleString('pl-PL')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(reservation.endDate).toLocaleString('pl-PL')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => handleDelete(reservation.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Anuluj
-                          </button>
-                        </td>
+                        </div>
+                        <div className="text-xs text-gray-500 space-y-1">
+                          <div>Od: {new Date(reservation.startDate).toLocaleString('pl-PL')}</div>
+                          <div>Do: {new Date(reservation.endDate).toLocaleString('pl-PL')}</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDelete(reservation.id)}
+                        className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                      >
+                        Anuluj
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: Tabela */}
+                <div className="hidden desktop:block overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Rezerwujący
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Data rozpoczęcia
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Data zakończenia
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Akcje
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {reservations.map((reservation) => (
+                        <tr key={reservation.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {reservation.reservedBy}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(reservation.startDate).toLocaleString('pl-PL')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(reservation.endDate).toLocaleString('pl-PL')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => handleDelete(reservation.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Anuluj
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         )}
 
-        <div className="mt-4">
+        <div className="mt-6 desktop:mt-4">
           <Link
             href="/"
-            className="text-blue-600 hover:text-blue-800"
+            className="text-blue-600 hover:text-blue-800 text-sm desktop:text-base"
           >
             ← Powrót do głównej
           </Link>
