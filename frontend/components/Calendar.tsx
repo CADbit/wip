@@ -30,17 +30,36 @@ interface CalendarProps {
 }
 
 export default function Calendar({ reservations }: CalendarProps) {
-  const [currentView, setCurrentView] = useState<View>('week');
+  // Ustaw początkowy widok na podstawie rozmiaru ekranu
+  const getInitialView = (): View => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 1024 ? 'day' : 'week';
+    }
+    return 'week';
+  };
+
+  const [currentView, setCurrentView] = useState<View>(getInitialView);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarHeight, setCalendarHeight] = useState(600);
 
   useEffect(() => {
-    const updateHeight = () => {
-      setCalendarHeight(window.innerWidth < 1024 ? 400 : 600);
+    const updateLayout = () => {
+      const isMobile = window.innerWidth < 1024;
+      setCalendarHeight(isMobile ? 400 : 600);
+      // Automatycznie ustaw widok na 'day' dla mobile, 'week' dla desktop
+      setCurrentView(prevView => {
+        if (isMobile && prevView !== 'day') {
+          return 'day';
+        } else if (!isMobile && prevView === 'day') {
+          return 'week';
+        }
+        return prevView;
+      });
     };
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
+    
+    updateLayout();
+    window.addEventListener('resize', updateLayout);
+    return () => window.removeEventListener('resize', updateLayout);
   }, []);
 
   const events: CalendarEvent[] = useMemo(() => {
